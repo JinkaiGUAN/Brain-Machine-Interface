@@ -96,7 +96,7 @@ title("Peri-stimulus Time Histograms");
 neuroIdx = 1;
 angleIdx = 1;
 totalTrialNumber = 5;
-positionIdx = 1;            % 1 represents x axis, 2 represents y axis;
+positionIdx = 2;            % 1 represents x axis, 2 represents y axis;
 maxTimeIdx = 0;             % Index referring to the max time when plotting
 
 for trialIdxLoop = 1 : totalTrialNumber
@@ -111,18 +111,46 @@ end
 
 hold off;
 xlabel('Time [s]');
-ylable("Position [mm]");
+ylabel("Position [mm]");
 titleStr = "";
 if positionIdx == 1
     titleStr = "X position deviation";
 elseif positionIdx == 2
     titleStr = "Y position deviation";
 end
+title(titleStr);
 
+%% 5. Plot turning curves for movement direction
+%%% Procedure:
+%%%     1. Movement direction. This can be done accoridng to the reaching angle.
+%%%     2. Firing rate average across time and trials, the logic of which can
+%%%         be the same as that in section 3.
 
+neuroIdxes = [1, 2, 3, 4];
+totalTrialNumber = 100;
+reachingAngles = [30, 70, 110, 150, 190, 230, 310, 350];
+totalReachingAngleNum = length(reachingAngles);
+spikeRatesAvgTime = zeros(length(neuroIdxes), totalTrialNumber, ...
+    totalReachingAngleNum);
 
+% Collect spike rates over time
+for trialIdx = 1 : totalReachingAngleNum
+    for reachingAngleIdx = 1 : totalReachingAngleNum
+        for neuroIdx = neuroIdxes
+            data = trial(trialIdx, reachingAngleIdx).spikes(neuroIdx, :);
+            spikeRatesAvgTime(trialIdx, reachingAngleIdx) = mean(data);
+        end
+    end
+end
 
+firingRate = mean(spikeRatesAvgTime, 1);
+firingRateStd = std(spikeRatesAvgTime, 0, 1);
 
+plot(reachingAngles, firingRate);
+errorbar(reachingAngles, firingRate, firingRateStd);
 
+xlabel("Reaching angle [$^\circ$]", 'Interpreter','latex');
+ylabel("Firing rate [-]", 'Interpreter','latex');
+title("Turnning curve", 'Interpreter', 'latex');
 
 

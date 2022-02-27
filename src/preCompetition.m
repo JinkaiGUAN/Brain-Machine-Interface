@@ -121,9 +121,44 @@ end
 title(titleStr);
 
 %% 5. Plot turning curves for movement direction
+%%% Procedure:
+%%%     1. Movement direction. This can be done accoridng to the reaching angle.
+%%%     2. Firing rate average across time and trials, the logic of which can
+%%%         be the same as that in section 3.
 
+neuroIdxes = [1, 2, 3, 4];
+totalTrialNumber = 100;
+reachingAngles = [30, 70, 110, 150, 190, 230, 310, 350];
+totalReachingAngleNum = length(reachingAngles);
+spikeRatesAvgTime = zeros(totalTrialNumber, ...
+    totalReachingAngleNum, length(neuroIdxes));
 
+% Collect spike rates over time
+for trialIdx = 1 : totalReachingAngleNum
+    for reachingAngleIdx = 1 : totalReachingAngleNum
+        for neuroIdx = neuroIdxes
+            data = trial(trialIdx, reachingAngleIdx).spikes(neuroIdx, :);
+            spikeRatesAvgTime(trialIdx, reachingAngleIdx, neuroIdx) = mean(data);
+        end
+    end
+end
 
+for idx = 1 : length(neuroIdxes)
+    neuroIdx = neuroIdxes(idx);
+    firingRate = squeeze(mean(spikeRatesAvgTime(:, :, neuroIdx), 1));
+    firingRateStd = std(spikeRatesAvgTime(:, :, neuroIdx), 0, 1);
+    
+    plot(reachingAngles, firingRate);
+    errorbar(reachingAngles, firingRate, firingRateStd);
+    
+    if idx == 1
+        hold on;
+    end
+end
 
+hold off;
+xlabel("Reaching angle [$^\circ$]", 'Interpreter','latex');
+ylabel("Firing rate [-]", 'Interpreter','latex');
+title("Turnning curve", 'Interpreter', 'latex');
 
 
