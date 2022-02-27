@@ -93,7 +93,6 @@ function [x, y] = positionEstimator(test_data, modelParameters)
   %             test_data.spikes = 98x340 matrix of spiking activity
   
   
-  
   % ... compute position at the given timestep.
   
   % Return Value:

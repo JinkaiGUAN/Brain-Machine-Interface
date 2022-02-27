@@ -11,21 +11,17 @@ load("monkeydata_training.mat");
 
 trialIdx = 1;
 angleIdx = 1;
-unitIdx = 1;
-dataSingleUnit = trial(trialIdx, angleIdx).spikes(unitIdx, :);
-timeSeries = 1:length(dataSingleUnit);
-% Assign the spike to new value
-nonZeroTime = find(dataSingleUnit == 1);
-labelData = ones(1, length(nonZeroTime)) * unitIdx;
-scatter(nonZeroTime, labelData, 'blue');
-hold on;
-for unitIdx = 2: 98
+for unitIdx = 1: 98
     dataSingleUnit = trial(trialIdx, angleIdx).spikes(unitIdx, :);
     nonZeroTime = find(dataSingleUnit == 1);
     labelData = ones(1, length(nonZeroTime)) * unitIdx;
     scatter(nonZeroTime, labelData, 'blue');
+    if unitIdx == 1
+        hold on;
+    end
 end
 hold off;
+timeSeries = 1:length(dataSingleUnit);
 xlim([timeSeries(1) timeSeries(end)]);
 xlabel("Time [ms]");
 ylabel("Neuro unit number [-]");
