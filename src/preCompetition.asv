@@ -121,7 +121,7 @@ end
 title(titleStr);
 
 %% 5. Plot turning curves for movement direction
-%%% Procedure:
+%%% Procedure: 
 %%%     1. Movement direction. This can be done accoridng to the reaching angle.
 %%%     2. Firing rate average across time and trials, the logic of which can
 %%%         be the same as that in section 3.
@@ -130,27 +130,59 @@ neuroIdxes = [1, 2, 3, 4];
 totalTrialNumber = 100;
 reachingAngles = [30, 70, 110, 150, 190, 230, 310, 350];
 totalReachingAngleNum = length(reachingAngles);
-spikeRatesAvgTime = zeros(length(neuroIdxes), totalTrialNumber, ...
-    totalReachingAngleNum);
+spikeRatesAvgTime = zeros(totalTrialNumber, totalReachingAngleNum, ...
+    length(neuroIdxes));
 
 % Collect spike rates over time
-for trialIdx = 1 : totalReachingAngleNum
+for trialIdx = 1 : totalTria
     for reachingAngleIdx = 1 : totalReachingAngleNum
         for neuroIdx = neuroIdxes
             data = trial(trialIdx, reachingAngleIdx).spikes(neuroIdx, :);
-            spikeRatesAvgTime(trialIdx, reachingAngleIdx) = mean(data);
+            spikeRatesAvgTime(trialIdx, reachingAngleIdx, neuroIdx) = mean(data);
         end
     end
 end
 
-firingRate = mean(spikeRatesAvgTime, 1);
-firingRateStd = std(spikeRatesAvgTime, 0, 1);
+for idx = 1 : length(neuroIdxes)
+    neuroIdx = neuroIdxes(idx);
+    firingRate = squeeze(mean(spikeRatesAvgTime(:, :, neuroIdx), 1));
+    firingRateStd = std(spikeRatesAvgTime(:, :, neuroIdx), 0, 1);
+    
+    plot(reachingAngles, firingRate);
+    errorbar(reachingAngles, firingRate, firingRateStd);
+    
+    if idx == 1
+        hold on;
+    end
+end
 
-plot(reachingAngles, firingRate);
-errorbar(reachingAngles, firingRate, firingRateStd);
-
+hold off;
+xlim([0, 360])
 xlabel("Reaching angle [$^\circ$]", 'Interpreter','latex');
 ylabel("Firing rate [-]", 'Interpreter','latex');
 title("Turnning curve", 'Interpreter', 'latex');
+
+%% 7. Achieve Population Vector Algorithm
+%%% In neuroscience, a population vector is the sum of the preferred directions
+%%% of a population of neurons, weighted by the respective spike counts. The
+%%% formulat for computing the normalized population vector, F, takes the
+%%% following form, F = \frac{\sum_j m_j F_j}{\sum_j m_j}, where $m_j$ is the
+%%% activity of cell j and $F_j$ is the preferred input for cell j. 
+
+%%% Questions
+%%% 1. Should the F_j is the reaching angle?
+%%% 2. What does the activity mean here?
+
+
+
+ 
+
+
+
+
+
+
+
+
 
 

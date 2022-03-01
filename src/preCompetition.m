@@ -120,8 +120,17 @@ elseif positionIdx == 2
 end
 title(titleStr);
 
+%%% Hand position
+% clear all
+% load('monkeydata_training.mat');
+hold all;
+for j = 1:size(trial,2)
+    for i = 1:size(trial,1)
+        plot(trial(i,j).handPos(1,:),trial(i,j).handPos(2,:));
+    end
+end
 %% 5. Plot turning curves for movement direction
-%%% Procedure:
+%%% Procedure: 
 %%%     1. Movement direction. This can be done accoridng to the reaching angle.
 %%%     2. Firing rate average across time and trials, the logic of which can
 %%%         be the same as that in section 3.
@@ -130,11 +139,11 @@ neuroIdxes = [1, 2, 3, 4];
 totalTrialNumber = 100;
 reachingAngles = [30, 70, 110, 150, 190, 230, 310, 350];
 totalReachingAngleNum = length(reachingAngles);
-spikeRatesAvgTime = zeros(totalTrialNumber, ...
-    totalReachingAngleNum, length(neuroIdxes));
+spikeRatesAvgTime = zeros(totalTrialNumber, totalReachingAngleNum, ...
+    length(neuroIdxes));
 
 % Collect spike rates over time
-for trialIdx = 1 : totalReachingAngleNum
+for trialIdx = 1 : totalTrialNumber
     for reachingAngleIdx = 1 : totalReachingAngleNum
         for neuroIdx = neuroIdxes
             data = trial(trialIdx, reachingAngleIdx).spikes(neuroIdx, :);
@@ -157,8 +166,32 @@ for idx = 1 : length(neuroIdxes)
 end
 
 hold off;
+xlim([0, 360])
 xlabel("Reaching angle [$^\circ$]", 'Interpreter','latex');
 ylabel("Firing rate [-]", 'Interpreter','latex');
 title("Turnning curve", 'Interpreter', 'latex');
+
+%% 7. Achieve Population Vector Algorithm
+%%% In neuroscience, a population vector is the sum of the preferred directions
+%%% of a population of neurons, weighted by the respective spike counts. The
+%%% formulat for computing the normalized population vector, F, takes the
+%%% following form, F = \frac{\sum_j m_j F_j}{\sum_j m_j}, where $m_j$ is the
+%%% activity of cell j and $F_j$ is the preferred input for cell j. 
+
+%%% Questions
+%%% 1. Should the F_j is the reaching angle?
+%%% 2. What does the activity mean here?
+
+
+
+ 
+
+
+
+
+
+
+
+
 
 
