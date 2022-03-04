@@ -33,6 +33,12 @@
 % Make sure that the output contains only the x and y coordinates of the
 % monkey's hand.
 
+%% KNN
+
+
+
+
+ %% 
 
 function [modelParameters] = positionEstimatorTraining(training_data)
   % Arguments:

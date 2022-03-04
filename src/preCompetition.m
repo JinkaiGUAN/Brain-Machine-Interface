@@ -95,9 +95,12 @@ title("Peri-stimulus Time Histograms");
 
 neuroIdx = 1;
 angleIdx = 1;
-totalTrialNumber = 5;
-positionIdx = 2;            % 1 represents x axis, 2 represents y axis;
+totalTrialNumber = 1;
+positionIdx = 1;            % 1 represents x axis, 2 represents y axis;
 maxTimeIdx = 0;             % Index referring to the max time when plotting
+
+gaussianCumF = @(b, x) normcdf(x, b(1), b(2)); % first is mu, second is sigma
+sigmoid = @(b, x) b(1) ./ (1 + exp(b(2) * x));
 
 for trialIdxLoop = 1 : totalTrialNumber
     dataSingleTrial = trial(trialIdxLoop, angleIdx).handPos(positionIdx, :);
@@ -107,7 +110,13 @@ for trialIdxLoop = 1 : totalTrialNumber
     if trialIdxLoop == 1
         hold on;
     end
+    %%% fixme: cannot give us robust fitting curve
+    X = 1 : length(dataSingleTrial);
+    mdl = fitnlm(1 : length(dataSingleTrial), dataSingleTrial, sigmoid, [30, 30]);
+    positionPredict = predict(mdl, X');
+    plot(1 : length(dataSingleTrial), positionPredict, 'DisplayName','predict');
 end
+
 
 hold off;
 xlabel('Time [s]');
@@ -123,12 +132,12 @@ title(titleStr);
 %%% Hand position
 % clear all
 % load('monkeydata_training.mat');
-hold all;
-for j = 1:size(trial,2)
-    for i = 1:size(trial,1)
-        plot(trial(i,j).handPos(1,:),trial(i,j).handPos(2,:));
-    end
-end
+% hold all;
+% for j = 1:size(trial,2)
+%     for i = 1:size(trial,1)
+%         plot(trial(i,j).handPos(1,:),trial(i,j).handPos(2,:));
+%     end
+% end
 %% 5. Plot turning curves for movement direction
 %%% Procedure: 
 %%%     1. Movement direction. This can be done accoridng to the reaching angle.
