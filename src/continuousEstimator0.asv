@@ -42,8 +42,6 @@ function [data] = Knn(trainingData, timeRange, K)
     %   should be `trial` name in the workspace.
     % timeRange (List) : [startTime, endTime], i.e., a range of starting time
     %   and end time in the sliding window.
-    % K (int): How many neighbours should be counted or sampled in KNN
-    %   algorithm.
     
     % Reaching angle mapping
     reachingAngles = [30, 70, 110, 150, 190, 230, 310, 350];
@@ -101,7 +99,7 @@ function [data] = Knn(trainingData, timeRange, K)
     M.train = size(data.trainingX, 1);  % Training trail number
     M.test = size(data.testX, 1);       % Test trail number
 
-    % Initialize disatance and prediction matrix
+    % Initialize disatc
     Dis = zeros(M.train, 1);            % Distance matrix
     predictYTest = zeros(M.test, 1);    % Predicted labels for test dataset
 
