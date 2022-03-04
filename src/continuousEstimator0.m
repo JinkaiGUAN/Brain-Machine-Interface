@@ -33,6 +33,74 @@
 % Make sure that the output contains only the x and y coordinates of the
 % monkey's hand.
 
+%% KNN
+
+data = Knn(trial, [1, 320]);
+
+function [data] = Knn(trainingData, timeRange)
+    % trainingData (struct): This should be specified as the name. Note this
+    %   should be `trial` name in the workspace.
+    % timeRange (List) : [startTime, endTime], i.e., a range of starting time
+    %   and end time in the sliding window.
+    
+    
+    % Reaching angle mapping
+    reachingAngles = [30, 70, 110, 150, 190, 230, 310, 350];
+    
+    % Num struct stores the data statistics information
+    Num.trial = size(trainingData, 1);
+    Num.reachingAngle = size(trainingData, 2);
+    Num.neuro = size(trainingData(1, 1).spikes, 1);
+
+    % Initialize the firaing rate: Here using the neuroIdx can retrieve the whole
+    % firing rate data over reaching angles and trials. This would be treated as
+    % our training data. 
+
+    % Initialize training feature set, with dimension of (100 * 8) by 98.
+    data.X = zeros(Num.trial * Num.reachingAngle, Num.neuro);
+    % Initialize training label set, with dimension of (100 * 8) by 1.
+    data.y = zeros(Num.trial * Num.reachingAngle, 1);
+    preIdx = 0;  % This is to refer the updating indexes
+    for trialIdx = 1 : Num.trial
+        for reachingAngleIdx = 1 : Num.reachingAngle
+            % Calculate the firing rate for the given sliding window.
+            neuroData = trainingData(trialIdx, reachingAngleIdx).spikes(:, ...
+                timeRange(1) : timeRange(2));
+            % Assign values for training features and labels.
+            data.X(preIdx + reachingAngleIdx, :) = mean(neuroData, 2)';
+            data.y(preIdx + reachingAngleIdx) = reachingAngles(reachingAngleIdx);
+        end
+        % Update preIdx
+        preIdx = preIdx + Num.reachingAngle;
+    end
+    
+    % Get the size of all dataset
+    [M, N] = size(data.X);
+    % Split the dataset into real training and testing set accoridng to ratio of
+    % 0.9, i.e., 10% of all data will be used as testing data, and cross
+    % validation will be used to veriy the algorithm. 
+    splitIdx = floor(M * 0.76);
+    data.trainingX = data.X(1 : splitIdx, :);
+    data.trainingY = data.y(1 : splitIdx, :);
+    data.testX = data.X(splitIdx + 1 : end, :);
+    data.testY = data.y(splitIdx + 1 : end, :);
+    
+    % Visualize the data. Normally, there should be two dimension, x-axis should
+    % be the firing rate, and y axis is the label value? Also different sorts of
+    % class should be labelled with legend. 
+    
+    hold on;
+    for idx = 1 : length(data.trainingX)
+        scatter(data.trainingX(idx, :), repmat(data.trainingY(idx, :), 1, N), ...
+            'DisplayName', ['Angle = ', num2str(data.trainingY(idx, 1))])
+        break;
+    end
+    legend;
+end
+
+
+
+ %% 
 
 function [modelParameters] = positionEstimatorTraining(training_data)
   % Arguments:
