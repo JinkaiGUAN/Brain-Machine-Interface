@@ -1,4 +1,5 @@
 function [modelParameters] = positionEstimatorTrainingPVA(training_data)
+%linear regression-- least square estimation
 %preprocessing firing rate bins = 300, from 320ms, sliding step = 20ms
 firingRate = cell(size(training_data,1),8); % cell size: 100trial x 8 angular
 bins = 300;
@@ -18,7 +19,7 @@ for i = 1:size(training_data,1)
     end
 end  
 
-totalFR = []; % total firing rate: 98(neuron number) x nsample in all trial
+totalFR = []; % total firing rate: 98(neuron number) x nsample in all trial (sliding step = 20ms)
 VAC = []; %size: 6(PositionX,Y VelocityX,Y AccX,Y) x nsample in all trial (sliding step = 20ms)
 for i = 1:size(training_data,1)
     for j = 1:size(training_data,2)
@@ -29,7 +30,6 @@ for i = 1:size(training_data,1)
             for t = 1:length(timebin)
                 onefiringRate(:,t) = sum(training_data(i,j).spikes(:,timebin(t)-bins:timebin(t)),2);
                 oneVAC(:,t) = [xyVxyAxy{i,j}(1:2,timebin(t))-xyVxyAxy{i,j}(1:2,1);...
-                
                 xyVxyAxy{i,j}(3:4,timebin(t));...
                     xyVxyAxy{i,j}(5:6,timebin(t))];
             end
@@ -48,7 +48,6 @@ X = [totalFR;l];
 % bY = regress(Vxy(2,:).',X.');
 % modelParameters = [bX,bY];
 %modelParameters = linearRegression(VAC,X);
-modelParameters = pinv(X*X.')*X*VAC.';
+modelParameters.linearRegression = pinv(X*X.')*X*VAC.';
 end
 
-%linear regression-- least square estimation
