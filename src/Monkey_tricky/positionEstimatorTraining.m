@@ -14,6 +14,11 @@ function [modelParameters] = positionEstimatorTraining(training_data)
   % - modelParameters:
   %     single structure containing all the learned parameters of your
   %     model and which can be used by the "positionEstimator" function.
-  modelParameters = 1;
+  [statisticsSummaries, Num] = bayesTrainer(training_data, [1, 500]);
+  modelParameters.bayes.statisticsSummaries = statisticsSummaries;
+  modelParameters.bayes.Num = Num;
+
+  
+
 
 end

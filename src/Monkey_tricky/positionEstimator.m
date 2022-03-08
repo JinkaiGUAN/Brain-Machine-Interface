@@ -44,6 +44,17 @@ function [x, y] = positionEstimator(test_data, modelParameters)
   
   % - [x, y]:
   %     current position of the hand
-  x = 1; y = 1
+
+  %%% Classify the test data
+ 
+  firingRate = sum(test_data.spikes(:, 1:320), 2)';
+  %%% todo: tackle the problem when there is more than one label being output
+  predictLabel = bayesPredictor(firingRate, ...
+      modelParameters.bayes.statisticsSummaries, modelParameters.bayes.Num);
+  
+  x = predictLabel;
+  y = 1;
+  %%% Linear regression
+
    
 end

@@ -28,7 +28,7 @@
 
 
 % Place the positionEstimator.m and positionEstimatorTraining.m into a
-% folder that is named with your official team name.
+% folder that is named with your official team name. 
 
 % Make sure that the output contains only the x and y coordinates of the
 % monkey's hand.
