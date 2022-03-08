@@ -29,7 +29,7 @@ for i = 1:size(training_data,1)
         % firing rate: 98cell x bins number
             for t = 1:length(timebin)
                 onefiringRate(:,t) = sum(training_data(i,j).spikes(:,timebin(t)-bins:timebin(t)),2);
-                onePxy(:,t) = xyVxyAxy{i,j}(1:2,timebin(t));
+                onePxy(:,t) = xyVxyAxy{i,j}(1:2,timebin(t))-xyVxyAxy{i,j}(1:2,timebin(1)); % minus start position
             end
 %          plot(oneVxy(1,:),'b')
         firingRate{i,j} = onefiringRate;
