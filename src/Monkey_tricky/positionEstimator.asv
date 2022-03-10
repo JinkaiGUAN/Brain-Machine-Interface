@@ -81,9 +81,7 @@ function [predictLabel] = KnnEstimator(firingRate, modelParameters, K)
 %           labels, i.e., 30 degress for instance. 
 
 %%% Output
-% - predictLabel (List): The predicted class for testing data, i.e., firring
-%       Rate. It has a dimension of [n, 98], where n is the trail numbers, and
-%       98 is the number of neuros. In this project, n default to 1. 
+% - predictLabel (List): The 
 
 % Create mapping from index to true reaching angles.
 keySet = {30, 70, 110, 150, 190, 230, 310, 350};

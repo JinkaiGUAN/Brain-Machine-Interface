@@ -41,9 +41,10 @@ function [modelParameters] = KnnTrainer(trainingData, timeRange)
 %       ending index of the sliding window.
 
 %%% Returns
-% - modelParameters (struct): The parameters that are going to be used when
-%       classifying the test data (i.e., a single trial data for any reaching
-%       angles). 
+% - modelParameters (struct):
+%       parameters (struct): The parameters that are going to be used when
+%       classifying the test data.
+
 
 % Reaching angle mapping
 reachingAngles = [30, 70, 110, 150, 190, 230, 310, 350];
@@ -75,6 +76,6 @@ for trialIdx = 1 : Num.trial
     preIdx = preIdx + Num.reachingAngle;
 end
 
-% Returns
-modelParameters = data;
+modelParameters.parameters = data;
+modelParameters.Num = Num;
 end
