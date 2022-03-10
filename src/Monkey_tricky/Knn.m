@@ -55,8 +55,7 @@ function [data] = Knn(trainingData, timeRange, K, splitRatio)
         preIdx = preIdx + Num.reachingAngle;
     end
     
-    
-
+   
     % Get the size of all dataset
     [M.all, N] = size(data.X);
     % Shuffle the dataset 

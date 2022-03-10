@@ -17,8 +17,8 @@ addpath('Monkey_tricky');
 
 % Select training and testing data (you can choose to split your data in a different way if you wish)
 %%% Getting the training and testing datset
-trainingData = trial(ix(1:80),:);
-testData = trial(ix(81:end),:);
+trainingData = trial(ix(1:50),:);
+testData = trial(ix(51:end),:);
 
 %%% 
 fprintf('Testing the continuous position estimator...')
@@ -57,7 +57,7 @@ for tr=1:size(testData,1)
                 [decodedPosX, decodedPosY] = positionEstimator(past_current_trial, modelParameters);
             end
 
-            
+
             predictLabels = [predictLabels, decodedPosX];
             trueLabels = [trueLabels, direc];
 
@@ -75,6 +75,10 @@ for tr=1:size(testData,1)
     end
 %     break;
 end
+
+% Output classification accuracy
+acc = sum(predictLabels == trueLabels) / length(trueLabels);
+disp(['Classification accuracy: ', num2str(acc * 100), '%']);
 
 legend('Decoded Position', 'Actual Position')
 

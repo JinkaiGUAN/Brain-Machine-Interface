@@ -33,7 +33,8 @@ grid
 
 % Train Model
 modelParameters = positionEstimatorTraining(trainingData);
-
+predictLabels = [];
+trueLabels = [];
 for tr=1:size(testData,1)
     display(['Decoding block ',num2str(tr),' out of ',num2str(size(testData,1))]);
     pause(0.001)
@@ -41,8 +42,6 @@ for tr=1:size(testData,1)
         decodedHandPos = [];
 
         times=340:20:size(testData(tr,direc).spikes,2); 
-        
-        labels = [];
 
         for t=times
             past_current_trial.trialId = testData(tr,direc).trialId;
@@ -55,13 +54,12 @@ for tr=1:size(testData,1)
                 [decodedPosX, decodedPosY, newParameters] = positionEstimator(past_current_trial, modelParameters);
                 modelParameters = newParameters;
             elseif nargout('positionEstimator') == 2
-                disp(['Data size, ', size(past_current_trial.spikes(:, 1:320), 2)]);
                 [decodedPosX, decodedPosY] = positionEstimator(past_current_trial, modelParameters);
             end
 
-            
-            labels = [labels, decodedPosX];
-            
+
+            predictLabels = [predictLabels, decodedPosX];
+            trueLabels = [trueLabels, direc];
 
 %             decodedPos = [decodedPosX; decodedPosY];
 %             decodedHandPos = [decodedHandPos decodedPos];
@@ -75,8 +73,12 @@ for tr=1:size(testData,1)
 %         plot(decodedHandPos(1,:),decodedHandPos(2,:), 'r');
 %         plot(testData(tr,direc).handPos(1,times),testData(tr,direc).handPos(2,times),'b')
     end
-    break;
+%     break;
 end
+
+% Output classification accuracy
+acc = sum(predictLabels == trueLabels) / length(trueLabels);
+disp(['Classification accuracy: ', num2str(acc * 100), '%']);
 
 legend('Decoded Position', 'Actual Position')
 
