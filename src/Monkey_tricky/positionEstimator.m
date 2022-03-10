@@ -36,6 +36,8 @@ function [x, y] = positionEstimator(test_data, modelParameters)
 %             test_data.startHandPos = [0; 0]
 %             test_data.decodedHandPos = [2.3; 1.5]
 %             test_data.spikes = 98x340 matrix of spiking activity
+% - modelParameters (struct):
+% 
 
 
 % ... compute position at the given timestep.
@@ -46,24 +48,19 @@ function [x, y] = positionEstimator(test_data, modelParameters)
 %     current position of the hand
 
 %%% Classify the test data
-
 firingRate = sum(test_data.spikes(:, 1:320), 2)';
-%% todo: tackle the problem when there is more than one label being output
+%%% Knn
+predictLabel = KnnEstimator(firingRate, modelParameters.Knn, 10);
 %   predictLabel = bayesPredictor(firingRate, ...
 %       modelParameters.bayes.statisticsSummaries, modelParameters.bayes.Num);
 %
 %   x = predictLabel;
 %   y = 1;
 
-%%% Knn
-predictLabel = KnnEstimator(firingRate, modelParameters.Knn, 10);
+%% todo: Get the single classification 
 
-x = predictLabel(1);
-y = 1;
 %%% Linear regression
-
-
-
+[x,y] = linearRegressionEstimator(test_data, modelParameters.regression);
 
 end
 
@@ -122,4 +119,25 @@ for n = 1 : M.test
     predictLabel(n) = reachingAngleMapping(table(labelIdx(1), 1));
 end
 
+end
+
+%% Lineare regression estimation
+
+function [x,y] = linearRegressionEstimator(test_data, modelParameters)
+%Teamname: Monkey Tricky
+%Author: Kexin Huang; Zhongjie Zhang;  Peter Guan; Haonan Zhou.
+%linear regression estimator
+
+spikes = test_data.spikes;
+t = size(spikes,2);
+n =  (t-320)/20;
+bins = 300;
+FR = [sum(spikes(:,t-bins:t),2)];
+pX = [FR;1];
+xy = pX.'*modelParameters;
+xyP = xy + test_data.startHandPos.';
+%     load handposition to esimator for testing
+%     xyP = test_data.handposition(:,t);   
+x = xyP(1);
+y = xyP(2);
 end

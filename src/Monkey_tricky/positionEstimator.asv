@@ -36,6 +36,8 @@ function [x, y] = positionEstimator(test_data, modelParameters)
 %             test_data.startHandPos = [0; 0]
 %             test_data.decodedHandPos = [2.3; 1.5]
 %             test_data.spikes = 98x340 matrix of spiking activity
+% - modelParameters (struct):
+% 
 
 
 % ... compute position at the given timestep.
@@ -58,11 +60,22 @@ firingRate = sum(test_data.spikes(:, 1:320), 2)';
 %%% Knn
 predictLabel = KnnEstimator(firingRate, modelParameters.Knn, 10);
 
-x = predictLabel(1);
-y = 1;
+% x = predictLabel(1);
+% y = 1;
+
 %%% Linear regression
-
-
+spikes = test_data.spikes;
+t = size(spikes,2);
+n =  (t-320)/20;
+bins = 300;
+FR = [sum(spikes(:,t-bins:t),2)];
+pX = [FR;1];
+xy = pX.'*modelParameters.regression;
+xyP = xy + test_data.startHandPos.';
+%     load handposition to esimator for testing
+%     xyP = test_data.handposition(:,t);
+x = xyP(1);
+y = xyP(2);
 
 
 end
@@ -81,7 +94,9 @@ function [predictLabel] = KnnEstimator(firingRate, modelParameters, K)
 %           labels, i.e., 30 degress for instance. 
 
 %%% Output
-% - predictLabel (List): The 
+% - predictLabel (List): The predicted class for testing data, i.e., firring
+%       Rate. It has a dimension of [n, 98], where n is the trail numbers, and
+%       98 is the number of neuros. In this project, n default to 1. 
 
 % Create mapping from index to true reaching angles.
 keySet = {30, 70, 110, 150, 190, 230, 310, 350};
@@ -121,3 +136,4 @@ for n = 1 : M.test
 end
 
 end
+
