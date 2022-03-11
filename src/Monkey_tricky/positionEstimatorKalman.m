@@ -4,15 +4,17 @@ function [x,y] = positionEstimatorKalman(test_data, modelParameters)
 %linear regression estimator
     spikes = test_data.spikes;
     t = size(spikes,2);
-    n =  (t-300)/20;
     bins = 299;
+    timepoint = 300:20:t;
+    n =  length(timepoint);
     obsZ = zeros(6,n);
-    for i = n:-1:1
-        FR = sum(spikes(:,t-bins-20*n:t-20*n),2);
+    for i = 1:n
+        FR = sum(spikes(:,timepoint(i)-bins:timepoint(i)),2);
 %         FR = FR-modelParameters.meanFR{modelParameters.lable};
         pX = [FR;1];
-        obsZ(:,n+1-i) = modelParameters.linearRegression{modelParameters.lable}*pX;
+        obsZ(:,i) = modelParameters.linearRegression{modelParameters.lable}*pX;
     end
+%     States = obsZ(1:2,n)    % for test linear Regresion Result.
     States = KalmanFilterProcess(obsZ, modelParameters.R{modelParameters.lable}, n);
     Pxy = States + test_data.startHandPos;
 %     load handposition to esimator for testing
