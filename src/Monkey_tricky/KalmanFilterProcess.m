@@ -1,4 +1,4 @@
-function [States] = KalmanFilterProcess(ObsZ, R, nDataPoints)
+function [PositionFinal] = KalmanFilterProcess(ObsZ, R, nDataPoints)
 %   nDataPoints: The number of data points.
 %   
 %   Detailed explanation goes here
@@ -9,7 +9,6 @@ function [States] = KalmanFilterProcess(ObsZ, R, nDataPoints)
         zeros(2),zeros(2), eye(2)];
     
     States = zeros([6, nDataPoints]);
-    States(:,1) = States0;
     
     SigmaQ = 0.3;
     Q=[ SigmaQ^6/36  0  SigmaQ^5/12  0  SigmaQ^4/6 0;...
@@ -30,6 +29,8 @@ function [States] = KalmanFilterProcess(ObsZ, R, nDataPoints)
 
         K = SigmaPrior*C'/(C*SigmaPrior*C'+R);
         States(:,t) = StatePrior + K*(ObsZ(:,t) - C*StatePrior);
-        Sigma = (eye(3)-K*C)*SigmaPrior;
+        Sigma = (eye(6)-K*C)*SigmaPrior;
     end
+
+    PositionFinal = States(1:2, end);
 end
