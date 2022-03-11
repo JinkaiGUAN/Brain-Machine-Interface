@@ -57,12 +57,13 @@ predictLabel = KnnEstimator(firingRate, modelParameters.Knn, 10);
 %   x = predictLabel;
 %   y = 1;
 
-%% todo: Get the single classification 
-
 %%% Linear regression
-[x,y] = linearRegressionEstimator(test_data, modelParameters.regression);
+[x,y] = linearRegressionEstimatorV2(test_data, modelParameters.regression, predictLabel);
+
 
 end
+
+%% Knn distance
 
 function [predictLabel] = KnnEstimator(firingRate, modelParameters, K)
 % Knn estimator 
@@ -140,4 +141,25 @@ xyP = xy + test_data.startHandPos.';
 %     xyP = test_data.handposition(:,t);   
 x = xyP(1);
 y = xyP(2);
+end
+
+function [x,y] = linearRegressionEstimatorV2(test_data, modelParameters, label)
+%Teamname: Monkey Tricky
+%Author: Kexin Huang; Zhongjie Zhang;  Peter Guan; Haonan Zhou.
+%linear regression estimator
+    spikes = test_data.spikes;
+    t = size(spikes,2);
+    n =  (t-320)/20;
+    bins = 300;
+    FR = [sum(spikes(:,t-bins:t),2)];
+    pX = [FR;1];
+    xy = modelParameters.linearRegression{label}*pX;
+    xyP = xy + test_data.startHandPos.';
+%     load handposition to esimator for testing
+%     xyP = test_data.handposition(:,t);   
+    x = xyP(1);
+    y = xyP(2);
+%     if x^2+y^2>10000
+%         x = x*(x/sqrt(x^2+y^2))
+%         y = y*(y/sqrt(x^2+y^2))
 end
