@@ -25,7 +25,8 @@ function [modelParameters] = positionEstimatorTraining(training_data)
 modelParameters.Knn = KnnTrainer(training_data, [1, 320]);
 
 %%% Generate linear regression parameters
-modelParameters.regression = LinearRegression(training_data);
+% modelParameters.regression = LinearRegression(training_data);
+modelParameters.regression = PxylinearRegression(training_data);
 
 end
 
@@ -135,4 +136,44 @@ X = [totalFR;l];
 % bY = regress(Vxy(2,:).',X.');
 % modelParameters = [bX,bY];
 modelParameters = pinv(X*X.')*X*Pxy.';
+end
+
+
+function [modelParameters] = PxylinearRegression(training_data)
+%Teamname: Monkey Tricky
+%Author: Kexin Huang; Zhongjie Zhang;  Peter Guan; Haonan Zhou.
+% firing rate window size = 300, from 320ms, sliding step = 20ms. 
+%linear regression estimator
+bins = 300;
+FR = []; % total firing rate: 98 x total number data point
+Pxy = [];
+modelParameters.linearRegression = cell(8);
+for j = 1:size(training_data,2)
+    FR = [];
+    Pxy = [];
+    for i = 1:size(training_data,1)
+        timebin = 320:20:(size(training_data(i,j).spikes,2)-80);
+        % firing rate: 98cell x bins number
+            for t = 1:length(timebin)
+                FR = [FR,sum(training_data(i,j).spikes(:,timebin(t)-bins:timebin(t)),2)];
+                xy = training_data(i,j).handPos(1:2,timebin(t)) - ...
+                    training_data(i,j).handPos(1:2,timebin(1));
+                Pxy = [Pxy,xy]; % minus start position
+            end
+    end
+    n = size(FR,2);
+    l = ones(1,n);
+    X = [FR;l];
+    modelParameters.linearRegression{j} = linearRegression(Pxy,X);
+end
+end
+
+function [Parameter] = linearRegression(y, X)
+% Input: y: matrix (nlabel,nSamlpe)
+%        X: matrix (nfeature,nSamlpe)
+%Output: Parameter: matrix(nfeature,nlabel)
+%To calculate coefficient estimates for a model with constant terms (intercepts), 
+% include a column consisting of 1 in the matrix X.
+    Parameter = transpose(pinv(X*X.')*X*y.');
+%To calculate y: y = Parameter*X;
 end

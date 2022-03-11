@@ -105,16 +105,16 @@ sigmoid = @(b, x) b(1) ./ (1 + exp(b(2) * x));
 for trialIdxLoop = 1 : totalTrialNumber
     dataSingleTrial = trial(trialIdxLoop, angleIdx).handPos(positionIdx, :);
     maxTimeIdx = max(maxTimeIdx, length(dataSingleTrial));
-    plot(dataSingleTrial);
+    plot(log(dataSingleTrial));
 
     if trialIdxLoop == 1
         hold on;
     end
     %%% fixme: cannot give us robust fitting curve
     X = 1 : length(dataSingleTrial);
-    mdl = fitnlm(1 : length(dataSingleTrial), dataSingleTrial, sigmoid, [30, 30]);
-    positionPredict = predict(mdl, X');
-    plot(1 : length(dataSingleTrial), positionPredict, 'DisplayName','predict');
+%     mdl = fitnlm(1 : length(dataSingleTrial), dataSingleTrial, sigmoid, [30, 30]);
+%     positionPredict = predict(mdl, X');
+%     plot(1 : length(dataSingleTrial), positionPredict, 'DisplayName','predict');
 end
 
 
