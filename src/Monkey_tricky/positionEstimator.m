@@ -48,9 +48,14 @@ function [x, y] = positionEstimator(test_data, modelParameters)
 %     current position of the hand
 
 %%% Classify the test data
-firingRate = sum(test_data.spikes(:, 1:320), 2)';
+timeLength = size(test_data.spikes, 2);
+if timeLength <= 340
+    firingRate = sum(test_data.spikes(:, 1:timeLength), 2)';
+else 
+    firingRate = sum(test_data.spikes(:, 1:340), 2)';
+end
 %%% Knn
-predictLabel = KnnEstimator(firingRate, modelParameters.Knn, 10);
+predictLabel = KnnEstimator(firingRate, modelParameters.Knn, 12);
 %   predictLabel = bayesPredictor(firingRate, ...
 %       modelParameters.bayes.statisticsSummaries, modelParameters.bayes.Num);
 %
@@ -58,9 +63,11 @@ predictLabel = KnnEstimator(firingRate, modelParameters.Knn, 10);
 %   y = 1;
 
 %%% Linear regression
-[x,y] = linearRegressionEstimatorV2(test_data, modelParameters.regression, predictLabel);
+% [x,y] = linearRegressionEstimatorV2(test_data, modelParameters.regression, predictLabel);
 
-
+[x,y] = positionEstimatorKalman(test_data, modelParameters.regression, predictLabel);
+% x = predictLabel;
+% y = 1;
 end
 
 %% Knn distance
@@ -147,19 +154,103 @@ function [x,y] = linearRegressionEstimatorV2(test_data, modelParameters, label)
 %Teamname: Monkey Tricky
 %Author: Kexin Huang; Zhongjie Zhang;  Peter Guan; Haonan Zhou.
 %linear regression estimator
+
+% retrieve statistic information
+stat = modelParameters.statistics{label};
+
+spikes = test_data.spikes;
+t = size(spikes,2);
+n =  (t-320)/20;
+bins = 300;
+FR = [sum(spikes(:,t-bins:t),2)];
+pX = [FR;1];
+
+% Input scaling
+pX = (pX(1:end-1) - stat.meanFeatures(1:end-1)); %./ stat.stdFeatures;
+
+xy = modelParameters.linearRegression{label}*[pX; 1];
+
+% reverse-mapping
+xy = xy + stat.meanPosition;
+
+xyP = xy + test_data.startHandPos.';
+
+
+x = xyP(1);
+y = xyP(2);
+
+end
+
+function [x,y] = positionEstimatorKalman(test_data, modelParameters, label)
+%Teamname: Monkey Tricky
+%Author: Kexin Huang; Zhongjie Zhang;  Peter Guan; Haonan Zhou.
+%linear regression estimator
     spikes = test_data.spikes;
     t = size(spikes,2);
-    n =  (t-320)/20;
-    bins = 300;
-    FR = [sum(spikes(:,t-bins:t),2)];
-    pX = [FR;1];
-    xy = modelParameters.linearRegression{label}*pX;
-    xyP = xy + test_data.startHandPos.';
+    bins = 299;
+    timepoint = 300:20:t;
+    n =  length(timepoint);
+    obsZ = zeros(6,n);
+    for i = 1:n
+        FR = sum(spikes(:,timepoint(i)-bins:timepoint(i)),2);
+%         FR = FR-modelParameters.meanFR{modelParameters.lable};
+        pX = [FR;1];
+        obsZ(:,i) = modelParameters.linearRegression{label}*pX;
+    end
+%     States = obsZ(1:2,n);    % for test linear Regresion Result.
+    States = KalmanFilterProcess(obsZ, modelParameters.R{label}, n);
+    Pxy = States + test_data.startHandPos;
 %     load handposition to esimator for testing
 %     xyP = test_data.handposition(:,t);   
-    x = xyP(1);
-    y = xyP(2);
+    x = Pxy(1);
+    y = Pxy(2);
 %     if x^2+y^2>10000
 %         x = x*(x/sqrt(x^2+y^2))
 %         y = y*(y/sqrt(x^2+y^2))
+end
+
+
+%% Kalman filter for estimating
+
+function [PositionFinal] = KalmanFilterProcess(ObsZ, R, nDataPoints)
+%   nDataPoints: The number of data points.
+%   
+%   Detailed explanation goes here
+
+    tStep = 20;
+    A = [eye(2), tStep*eye(2), 0.5*tStep^2*eye(2);...
+        zeros(2), eye(2), tStep*eye(2);...
+        zeros(2),zeros(2), eye(2)];
+    
+    States = zeros([6, nDataPoints]);
+    
+    SigmaQ = 0.3;
+    Q=[ SigmaQ^6/36  0  SigmaQ^5/12  0  SigmaQ^4/6 0;...
+        0 SigmaQ^6/36  0  SigmaQ^5/12  0  SigmaQ^4/6;...
+        SigmaQ^5/12  0  SigmaQ^4/4  0  SigmaQ^3/2 0;...
+        0 SigmaQ^5/12  0  SigmaQ^4/4  0  SigmaQ^3/2;...
+        SigmaQ^4/6   0   SigmaQ^3/2  0  SigmaQ^2 0;...
+        0 SigmaQ^4/6   0   SigmaQ^3/2  0  SigmaQ^2];
+
+    % Sigmatm1 = eye(6);
+    Sigma = eye(6)*1;
+    if exist('sigma.mat','file') ~= 0
+        load('sigma.mat',"Sigma");
+    end
+    C = eye(6);
+    % statetm1=zeros([6,1]);
+    for t = 2:nDataPoints
+        StatePrior = A*States(:,t-1);
+        SigmaPrior = A*Sigma*A'+Q;
+        K = SigmaPrior*C'/(C*SigmaPrior*C'+R);
+        States(:,t) = StatePrior + K*(ObsZ(:,t) - C*StatePrior); % 6 (x, y, vel, ...) by N (2) - 
+        Sigma = (eye(6)-K*C)*SigmaPrior;
+       
+    end
+    
+    %% todo: trim the data larger than 100 time step.
+
+    save('sigma.mat',"Sigma",'-mat');
+    PositionFinal = States(1:2, end);
+    
 end

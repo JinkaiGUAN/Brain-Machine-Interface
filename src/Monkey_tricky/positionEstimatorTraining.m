@@ -22,11 +22,13 @@ function [modelParameters] = positionEstimatorTraining(training_data)
 
 
 %%% Generate KNN Parameters
-modelParameters.Knn = KnnTrainer(training_data, [1, 320]);
+modelParameters.Knn = KnnTrainer(training_data, [1, 340]);
 
 %%% Generate linear regression parameters
 % modelParameters.regression = LinearRegression(training_data);
-modelParameters.regression = PxylinearRegression(training_data);
+% modelParameters.regression = PxylinearRegression(training_data);
+modelParameters.regression = linearRegressionKalmanTraining(training_data);
+
 
 end
 
@@ -154,18 +156,34 @@ for j = 1:size(training_data,2)
     for i = 1:size(training_data,1)
         timebin = 320:20:(size(training_data(i,j).spikes,2)-80);
         % firing rate: 98cell x bins number
-            for t = 1:length(timebin)
-                FR = [FR,sum(training_data(i,j).spikes(:,timebin(t)-bins:timebin(t)),2)];
-                xy = training_data(i,j).handPos(1:2,timebin(t)) - ...
-                    training_data(i,j).handPos(1:2,timebin(1));
-                Pxy = [Pxy,xy]; % minus start position
-            end
+        for t = 1:length(timebin)
+            FR = [FR,sum(training_data(i,j).spikes(:,timebin(t)-bins:timebin(t)),2)];
+            xy = training_data(i,j).handPos(1:2,timebin(t)) - ...
+                training_data(i,j).handPos(1:2,timebin(1));
+            Pxy = [Pxy,xy]; % minus start position
+        end
     end
     n = size(FR,2);
     l = ones(1,n);
     X = [FR;l];
+
+    % Centerlise the data
+    stat.meanFeatures = mean(X, 2);
+    stat.stdFeatures = std(X, 0, 2);
+    X = (X - stat.meanFeatures); % ./ stat.stdFeatures;
+    
+    % Pxy has dimension of 2 by N
+    stat.meanPosition = [mean(Pxy(1, :), 2), mean(Pxy(2, :), 2)];
+    stat.stdPosition = [std(Pxy(1, :), 0, 2), std(Pxy(2, :), 0, 2)];
+    Pxy(1, :) = (Pxy(1, :) - stat.meanPosition(1)); %/ stat.stdPosition(1);
+    Pxy(2, :) = Pxy(2, :) - stat.meanPosition(2); %/ stat.stdPosition(2);
+
+    % store statistics infromarion in model parameters
+    modelParameters.statistics{j} = stat;
+    
     modelParameters.linearRegression{j} = linearRegression(Pxy,X);
 end
+
 end
 
 function [Parameter] = linearRegression(y, X)
@@ -177,3 +195,46 @@ function [Parameter] = linearRegression(y, X)
     Parameter = transpose(pinv(X*X.')*X*y.');
 %To calculate y: y = Parameter*X;
 end
+
+%% Kalman related process
+
+function [modelParameters] = linearRegressionKalmanTraining(training_data)
+%Teamname: Monkey Tricky
+%Author: Kexin Huang; Zhongjie Zhang;  Peter Guan; Haonan Zhou.
+% firing rate window size = 299, from 320ms, sliding step = 20ms. 
+%linear regression estimator
+bins = 299;
+modelParameters.linearRegression = cell(8);
+modelParameters.R = cell(8);
+modelParameters.meanFR = cell(8);
+for j = 1:size(training_data,2)
+    FR = [];
+    PxyVxyAxy = [];
+    for i = 1:size(training_data,1)
+        timebin = 300:20:(size(training_data(i,j).spikes,2)-20);
+        Vxy = diff(training_data(i,j).handPos(1:2,:),1,2);
+        Axy = diff(training_data(i,j).handPos(1:2,:),2,2);
+        % firing rate: 98cell x bins number
+            for t = 1:length(timebin)
+                FR = [FR,sum(training_data(i,j).spikes(:,timebin(t)-bins:timebin(t)),2)];
+                PVA = [training_data(i,j).handPos(1:2,timebin(t))-...
+                    training_data(i,j).handPos(1:2,timebin(1));...
+                    Vxy(1:2,timebin(t)+1);Axy(1:2,timebin(t)-2)];
+                PxyVxyAxy = [PxyVxyAxy,PVA]; % minus start position
+            end
+    end
+%     modelParameters.meanFR{j} = mean(FR,2);
+%     FR = FR - modelParameters.meanFR{j};
+    n = size(FR,2);
+    l = ones(1,n);
+    X = [FR;l];
+%     modelParameters.linearRegression{j} = zeros(2,99);
+%     modelParameters.linearRegression{j}(1,:) = regress(Pxy(1,:).',X.');
+%     modelParameters.linearRegression{j}(2,:) = regress(Pxy(2,:).',X.');
+    modelParameters.linearRegression{j} = linearRegression(PxyVxyAxy,X);
+    r = modelParameters.linearRegression{j}*X-PxyVxyAxy;
+    modelParameters.R{j} = cov(r.');
+end
+modelParameters.lable = 2; % for test, you can change to int(1-8).
+end
+

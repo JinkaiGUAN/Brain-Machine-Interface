@@ -58,8 +58,8 @@ for tr=1:size(testData,1)
                 [decodedPosX, decodedPosY] = positionEstimator(past_current_trial, modelParameters);
             end
 
-            predictLabels = [predictLabels, decodedPosX];
-            trueLabels = [trueLabels, direc];
+%             predictLabels = [predictLabels, decodedPosX];
+%             trueLabels = [trueLabels, direc];
 
             decodedPos = [decodedPosX; decodedPosY];
             decodedHandPos = [decodedHandPos decodedPos];
@@ -77,8 +77,8 @@ for tr=1:size(testData,1)
 end
 
 % Output classification accuracy
-% acc = sum(predictLabels == trueLabels) / length(trueLabels);
-% disp(['Classification accuracy: ', num2str(acc * 100), '%']);
+acc = sum(predictLabels == trueLabels) / length(trueLabels);
+disp(['Classification accuracy: ', num2str(acc * 100), '%']);
 
 legend('Decoded Position', 'Actual Position')
 
