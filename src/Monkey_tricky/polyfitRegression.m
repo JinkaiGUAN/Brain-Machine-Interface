@@ -16,7 +16,7 @@ modelParameters.betaYP3 = zeros([3,8]);
         posXP3 = [];
         posYP3 = [];
         timeRecordP3 = [];
-        for trial = 1:length(training_data,1)
+        for trial = 1:size(training_data,1)
             for t = 320:20:500
                 % Part2
                 posXP2 = [posXP2; training_data(trial, label).handPos(1, t)];
