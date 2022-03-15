@@ -3,7 +3,7 @@ function [PositionFinal] = KalmanFilterProcess(ObsZ, R, nDataPoints)
 %   
 %   Detailed explanation goes here
 
-    tStep = 0.02;
+    tStep = 20; % ms
     A = [eye(2), tStep*eye(2), 0.5*tStep^2*eye(2);...
         zeros(2), eye(2), tStep*eye(2);...
         zeros(2),zeros(2), eye(2)];
@@ -19,7 +19,13 @@ function [PositionFinal] = KalmanFilterProcess(ObsZ, R, nDataPoints)
         0 SigmaQ^4/6   0   SigmaQ^3/2  0  SigmaQ^2];
 
     % Sigmatm1 = eye(6);
-    Sigma = eye(6)*1;
+%     Sigma = eye(6)*1;
+    Sigma = [   13.1953    2.0629    0.1273    0.0629   -0.0054   -0.0005
+                2.0629    2.6261   -0.0238    0.0234   -0.0011   -0.0010
+                0.1273   -0.0238    0.0107    0.0019   -0.0000    0.0000
+                0.0629    0.0234    0.0019    0.0024   -0.0001    0.0000
+                -0.0054   -0.0011   -0.0000   -0.0001    0.0000    0.0000
+                -0.0005   -0.0010    0.0000    0.0000    0.0000    0.0000];
     C = eye(6);
     % statetm1=zeros([6,1]);
 
@@ -31,6 +37,7 @@ function [PositionFinal] = KalmanFilterProcess(ObsZ, R, nDataPoints)
         States(:,t) = StatePrior + K*(ObsZ(:,t) - C*StatePrior);
         Sigma = (eye(6)-K*C)*SigmaPrior;
     end
+%     disp(Sigma);
 
     PositionFinal = States(1:2, end);
 end
