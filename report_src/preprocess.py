@@ -85,12 +85,12 @@ class RetrieveData:
             pre_idx += self.angle_num
 
     @property
-    def training_X(self) -> np.ndarray:
+    def X(self) -> np.ndarray:
         """Data size of (trail_num x angle_num, 98)"""
         return self._X
 
     @property
-    def training_y(self) -> np.ndarray:
+    def y(self) -> np.ndarray:
         """Data size of (trail_num x angle_num, )"""
         return self._y
 
@@ -100,6 +100,6 @@ if __name__ == "__main__":
     mat_path = os.path.join(src_dir, 'monkeydata_training.mat')
 
     retrieve_data = RetrieveData(mat_path)
-    print(retrieve_data.training_X.shape)
-    print(retrieve_data.training_y.shape)
+    print(retrieve_data.X.shape)
+    print(retrieve_data.y.shape)
 
