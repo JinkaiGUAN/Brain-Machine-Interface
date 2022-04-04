@@ -17,8 +17,8 @@ addpath('Monkey_tricky');
 
 % Select training and testing data (you can choose to split your data in a different way if you wish)
 %%% Getting the training and testing datset
-trainingData = trial(ix(1:50),:);
-testData = trial(ix(51:end),:);
+trainingData = trial(ix(1:60),:);
+testData = trial(ix(61:end),:);
 
 %%% 
 fprintf('Testing the continuous position estimator...')
@@ -50,14 +50,14 @@ for tr=1:size(testData,1)
             past_current_trial.decodedHandPos = decodedHandPos;
 
             past_current_trial.startHandPos = testData(tr,direc).handPos(1:2,1); 
-            
+         
             if nargout('positionEstimator') == 3
                 [decodedPosX, decodedPosY, newParameters] = positionEstimator(past_current_trial, modelParameters);
                 modelParameters = newParameters;
             elseif nargout('positionEstimator') == 2
                 [decodedPosX, decodedPosY] = positionEstimator(past_current_trial, modelParameters);
             end
-
+            
             predictLabels = [predictLabels, decodedPosX];
             trueLabels = [trueLabels, direc];
 
@@ -77,10 +77,10 @@ for tr=1:size(testData,1)
 end
 
 % Output classification accuracy
-% acc = sum(predictLabels == trueLabels) / length(trueLabels);
-% disp(['Classification accuracy: ', num2str(acc * 100), '%']);
+acc = sum(predictLabels == trueLabels) / length(trueLabels);
+disp(['Classification accuracy: ', num2str(acc * 100), '%']);
 
-legend('Decoded Position', 'Actual Position')
+legend('Decoded Position', 'Actual Position');
 
 RMSE = sqrt(meanSqError/n_predictions);
 

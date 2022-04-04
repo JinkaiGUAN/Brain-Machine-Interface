@@ -1,36 +1,70 @@
 function [modelParameters] = positionEstimatorTraining(training_data)
-% Arguments:
+%Teamname: Monkey Tricky
+%Author: Kexin Huang; Zhongjie Zhang;  Peter Guan; Haonan Zhou.
+% firing rate window size = 299, from 320ms, sliding step = 20ms. 
+%knn
+modelParameters.Knn = KnnTrainer(training_data, [1, 340]);
+%linear regression estimator
+bins = 20;
+modelParameters.ployx = cell(8);
+modelParameters.ployy = cell(8);
+modelParameters.endTime = zeros(8);
+modelParameters.meanend = zeros(2,8);
+% modelParameters.stdend = zeros(2,8);
+% modelParameters.startP = zeros(2,8);
+% for j = 1:size(training_data,2)
+%     StartPxy = [];
+%     for i = 1:size(training_data,1)
+%         StartPxy = [StartPxy,training_data(i,j).handPos(1:2,1)];
+%     end
+%     modelParameters.startP(:,j) = mean(StartPxy,2);
+% end
+for j = 1:size(training_data,2)
+    onePxy = [];
+    onetime = [];
+    timeEnd = [];
+    twotime = [];
+    twoPxy = [];
+    threetime = [];
+    threePxy = [];
+    endtime = 100;
+    starttime = 440;
+    for i = 1:size(training_data,1)
+        t = size(training_data(i,j).spikes,2);
+        onetimebin = starttime:bins:t-endtime;
+        onetime = [onetime,onetimebin];
+        onexy = training_data(i,j).handPos(1:2,starttime:bins:t-endtime)-...
+                    training_data(i,j).handPos(1:2,1);
+        onePxy = [onePxy,onexy];
+        timeEnd = [timeEnd,size(training_data(i,j).spikes,2)-endtime];
+        
+        twotimebin = t-endtime:bins:t;
+        twotime = [twotime,twotimebin];
+        twoxy = training_data(i,j).handPos(1:2,t-endtime:bins:t)-...
+                    training_data(i,j).handPos(1:2,1);
+        twoPxy = [twoPxy,twoxy];
 
-% - training_data:
-%     training_data(n,k)              (n = trial id,  k = reaching angle)
-%     training_data(n,k).trialId      unique number of the trial
-%     training_data(n,k).spikes(i,t)  (i = neuron id, t = time)
-%     training_data(n,k).handPos(d,t) (d = dimension [1-3], t = time)
-
-% ... train your model
-
-% Return Value:
-
-% - modelParameters:
-%     single structure containing all the learned parameters of your
-%     model and which can be used by the "positionEstimator" function.
-
-%% Generate Bayes Parameters
-% [statisticsSummaries, Num] = bayesTrainer(training_data, [1, 500]);
-% modelParameters.bayes.statisticsSummaries = statisticsSummaries;
-% modelParameters.bayes.Num = Num;
-
-
-%%% Generate KNN Parameters
-modelParameters.Knn = KnnTrainer(training_data, [1, 320]);
-
-%%% Generate linear regression parameters
-% modelParameters.regression = LinearRegression(training_data);
-modelParameters.regression = PxylinearRegression(training_data);
-
+        threetimebin = 300:bins:starttime;
+        threetime = [threetime,threetimebin];
+        threexy = training_data(i,j).handPos(1:2,300:bins:starttime)-...
+                    training_data(i,j).handPos(1:2,1);
+        threePxy = [threePxy,threexy];
+    end
+    %mid phase
+    modelParameters.ployx{j,1} = ployjason(onetime,onePxy(1,:),2);
+    modelParameters.ployy{j,1} = ployjason(onetime,onePxy(2,:),2);
+    %stop phase
+    modelParameters.ployx{j,2} = ployjason(twotime,twoPxy(1,:),2);
+    modelParameters.ployy{j,2} = ployjason(twotime,twoPxy(2,:),2);
+    modelParameters.endTime(j) = mean(timeEnd);
+    %disp(modelParameters.endTime(j))
+    modelParameters.meanend(:,j) = mean(twoPxy,2);
+    modelParameters.stdend(:,j) = std(twoPxy,0,2);
+    %start phase
+    modelParameters.ployx{j,3} = ployjason(threetime,threePxy(1,:),2);
+    modelParameters.ployy{j,3} = ployjason(threetime,threePxy(2,:),2);
 end
-
-%% KNN
+end
 
 function [modelParameters] = KnnTrainer(trainingData, timeRange)
 % K-nearest-neighbour algorithm.
@@ -84,96 +118,17 @@ end
 modelParameters = data;
 end
 
-%% Linear Regression
-
-function [modelParameters] = LinearRegression(training_data)
-%Teamname: Monkey Tricky
-%Author: Kexin Huang; Zhongjie Zhang;  Peter Guan; Haonan Zhou.
-% firing rate window size = 300, from 320ms, sliding step = 20ms. 
-%linear regression estimator
-firingRate = cell(size(training_data,1),8);
-bins = 300;
-totalFR = []; % total firing rate: 98 x total number data point
-Pxy = [];
-xyVxyAxy = cell(size(training_data,1),8);
-for i = 1:size(training_data,1)
-    for j = 1:size(training_data,2)
-        position = zeros(2,size(training_data(i,j).handPos,2));
-        positionDiff = zeros(2,size(training_data(i,j).handPos,2));
-        positionDD = zeros(2,size(training_data(i,j).handPos,2));
-        for k = 1: 2
-            position(k,:) = training_data(i,j).handPos(k,:);
-            positionDiff(k,2:size(training_data(i,j).handPos,2)) = diff(training_data(i,j).handPos(k,:));
-            positionDD(k,2:size(training_data(i,j).handPos,2)) = diff(positionDiff(k,:));
+function [beta] = ployjason(x,y,q)
+    n = length(y);
+    b = zeros(n,1);
+    A = zeros(n,q+1);
+    for i=1:n
+        b(i) = y(i);
+        for j=1:q+1
+            A(i,j) = x(i)^(q+1-j);
         end
-        xyVxyAxy{i,j} = [position;positionDiff;positionDD];
     end
-end  
-
-for i = 1:size(training_data,1)
-    for j = 1:size(training_data,2)
-        timebin = 320:20:(size(training_data(i,j).spikes,2)-80);
-        onefiringRate = zeros(size(training_data(i,j).spikes,1),length(timebin));
-        onePxy = zeros(2,length(timebin));
-        % firing rate: 98cell x bins number
-            for t = 1:length(timebin)
-                onefiringRate(:,t) = sum(training_data(i,j).spikes(:,timebin(t)-bins:timebin(t)),2);
-                onePxy(:,t) = xyVxyAxy{i,j}(1:2,timebin(t))-xyVxyAxy{i,j}(1:2,timebin(1)); % minus start position
-            end
-%          plot(oneVxy(1,:),'b')
-        firingRate{i,j} = onefiringRate;
-        totalFR = [totalFR,onefiringRate];
-        Pxy = [Pxy,onePxy];
-    end
-end
-% Falman filtering encoding
-n = size(totalFR,2);
-%Linear regression 
-l = ones(1,n);
-X = [totalFR;l];
-%r = corr(X.',Vxy.')
-% bX = regress(Vxy(1,:).',X.');
-% bY = regress(Vxy(2,:).',X.');
-% modelParameters = [bX,bY];
-modelParameters = pinv(X*X.')*X*Pxy.';
-end
-
-
-function [modelParameters] = PxylinearRegression(training_data)
-%Teamname: Monkey Tricky
-%Author: Kexin Huang; Zhongjie Zhang;  Peter Guan; Haonan Zhou.
-% firing rate window size = 300, from 320ms, sliding step = 20ms. 
-%linear regression estimator
-bins = 300;
-FR = []; % total firing rate: 98 x total number data point
-Pxy = [];
-modelParameters.linearRegression = cell(8);
-for j = 1:size(training_data,2)
-    FR = [];
-    Pxy = [];
-    for i = 1:size(training_data,1)
-        timebin = 320:20:(size(training_data(i,j).spikes,2)-80);
-        % firing rate: 98cell x bins number
-            for t = 1:length(timebin)
-                FR = [FR,sum(training_data(i,j).spikes(:,timebin(t)-bins:timebin(t)),2)];
-                xy = training_data(i,j).handPos(1:2,timebin(t)) - ...
-                    training_data(i,j).handPos(1:2,timebin(1));
-                Pxy = [Pxy,xy]; % minus start position
-            end
-    end
-    n = size(FR,2);
-    l = ones(1,n);
-    X = [FR;l];
-    modelParameters.linearRegression{j} = linearRegression(Pxy,X);
-end
-end
-
-function [Parameter] = linearRegression(y, X)
-% Input: y: matrix (nlabel,nSamlpe)
-%        X: matrix (nfeature,nSamlpe)
-%Output: Parameter: matrix(nfeature,nlabel)
-%To calculate coefficient estimates for a model with constant terms (intercepts), 
-% include a column consisting of 1 in the matrix X.
-    Parameter = transpose(pinv(X*X.')*X*y.');
-%To calculate y: y = Parameter*X;
+    C = A'*A;
+    d = A'*b;
+    beta = C\d;
 end
