@@ -57,21 +57,21 @@ for tr=1:size(testData,1)
             elseif nargout('positionEstimator') == 2
                 [decodedPosX, decodedPosY] = positionEstimator(past_current_trial, modelParameters);
             end
-% 
+            
             predictLabels = [predictLabels, decodedPosX];
             trueLabels = [trueLabels, direc];
-% 
-%             decodedPos = [decodedPosX; decodedPosY];
-%             decodedHandPos = [decodedHandPos decodedPos];
-%             
-%             meanSqError = meanSqError + norm(testData(tr,direc).handPos(1:2,t) - decodedPos)^2;
+
+            decodedPos = [decodedPosX; decodedPosY];
+            decodedHandPos = [decodedHandPos decodedPos];
+            
+            meanSqError = meanSqError + norm(testData(tr,direc).handPos(1:2,t) - decodedPos)^2;
             
         end
 
-%         n_predictions = n_predictions+length(times);
-%         hold on
-%         plot(decodedHandPos(1,:),decodedHandPos(2,:), 'r');
-%         plot(testData(tr,direc).handPos(1,times),testData(tr,direc).handPos(2,times),'b')
+        n_predictions = n_predictions+length(times);
+        hold on
+        plot(decodedHandPos(1,:),decodedHandPos(2,:), 'r');
+        plot(testData(tr,direc).handPos(1,times),testData(tr,direc).handPos(2,times),'b')
     end
 
 end

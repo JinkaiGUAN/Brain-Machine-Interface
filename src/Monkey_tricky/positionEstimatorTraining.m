@@ -5,12 +5,20 @@ function [modelParameters] = positionEstimatorTraining(training_data)
 %knn
 modelParameters.Knn = KnnTrainer(training_data, [1, 340]);
 %linear regression estimator
-bins = 300;
+bins = 20;
 modelParameters.ployx = cell(8);
 modelParameters.ployy = cell(8);
 modelParameters.endTime = zeros(8);
 modelParameters.meanend = zeros(2,8);
-modelParameters.stdend = zeros(2,8);
+% modelParameters.stdend = zeros(2,8);
+% modelParameters.startP = zeros(2,8);
+% for j = 1:size(training_data,2)
+%     StartPxy = [];
+%     for i = 1:size(training_data,1)
+%         StartPxy = [StartPxy,training_data(i,j).handPos(1:2,1)];
+%     end
+%     modelParameters.startP(:,j) = mean(StartPxy,2);
+% end
 for j = 1:size(training_data,2)
     onePxy = [];
     onetime = [];
@@ -19,26 +27,28 @@ for j = 1:size(training_data,2)
     twoPxy = [];
     threetime = [];
     threePxy = [];
+    endtime = 100;
+    starttime = 440;
     for i = 1:size(training_data,1)
         t = size(training_data(i,j).spikes,2);
-        timebin = 300:1:t;
-        onetime = [onetime,timebin(62:length(timebin)-100)];
-        onexy = training_data(i,j).handPos(1:2,361:t-100)-...
+        onetimebin = starttime:bins:t-endtime;
+        onetime = [onetime,onetimebin];
+        onexy = training_data(i,j).handPos(1:2,starttime:bins:t-endtime)-...
                     training_data(i,j).handPos(1:2,1);
         onePxy = [onePxy,onexy];
-
-        timeEnd = [timeEnd,size(training_data(i,j).spikes,2)-120];
-        twotime = [twotime,timebin(length(timebin)-100:length(timebin))];
-        twoxy = training_data(i,j).handPos(1:2,t-100:t)-...
+        timeEnd = [timeEnd,size(training_data(i,j).spikes,2)-endtime];
+        
+        twotimebin = t-endtime:bins:t;
+        twotime = [twotime,twotimebin];
+        twoxy = training_data(i,j).handPos(1:2,t-endtime:bins:t)-...
                     training_data(i,j).handPos(1:2,1);
         twoPxy = [twoPxy,twoxy];
-        
-        threetime = [threetime,timebin(1:61)];
-        threexy = training_data(i,j).handPos(1:2,300:360)-...
+
+        threetimebin = 300:bins:starttime;
+        threetime = [threetime,threetimebin];
+        threexy = training_data(i,j).handPos(1:2,300:bins:starttime)-...
                     training_data(i,j).handPos(1:2,1);
         threePxy = [threePxy,threexy];
-
-         
     end
     %mid phase
     modelParameters.ployx{j,1} = ployjason(onetime,onePxy(1,:),2);
@@ -47,14 +57,13 @@ for j = 1:size(training_data,2)
     modelParameters.ployx{j,2} = ployjason(twotime,twoPxy(1,:),2);
     modelParameters.ployy{j,2} = ployjason(twotime,twoPxy(2,:),2);
     modelParameters.endTime(j) = mean(timeEnd);
+    %disp(modelParameters.endTime(j))
     modelParameters.meanend(:,j) = mean(twoPxy,2);
     modelParameters.stdend(:,j) = std(twoPxy,0,2);
     %start phase
     modelParameters.ployx{j,3} = ployjason(threetime,threePxy(1,:),2);
     modelParameters.ployy{j,3} = ployjason(threetime,threePxy(2,:),2);
 end
-
-
 end
 
 function [modelParameters] = KnnTrainer(trainingData, timeRange)
