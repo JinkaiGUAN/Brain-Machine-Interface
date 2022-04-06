@@ -9,13 +9,15 @@
 """
 
 import os
-import scipy.io as scio
-import numpy as np
 import typing as t
+
+import numpy as np
+import scipy.io as scio
 
 
 class Trial:
     """The base data structure for each trail."""
+
     def __init__(self, origin_data: np.ndarray, valid_start: int = 0, valid_end: int = -1) -> None:
         self._trial_id = origin_data[0].item()
         self._spikes = origin_data[1]
@@ -89,10 +91,18 @@ class RetrieveData:
         """Data size of (trail_num x angle_num, 98)"""
         return self._X
 
+    @X.setter
+    def X(self, val: np.ndarray) -> None:
+        self._X = val
+
     @property
     def y(self) -> np.ndarray:
         """Data size of (trail_num x angle_num, )"""
         return self._y
+
+    @y.setter
+    def y(self, val: np.ndarray) -> None:
+        self._y = val;
 
 
 if __name__ == "__main__":
@@ -102,4 +112,3 @@ if __name__ == "__main__":
     retrieve_data = RetrieveData(mat_path)
     print(retrieve_data.X.shape)
     print(retrieve_data.y.shape)
-
