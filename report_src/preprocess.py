@@ -10,6 +10,8 @@
 
 import os
 import typing as t
+from collections import deque
+from collections import defaultdict
 
 import numpy as np
 import scipy.io as scio
@@ -31,8 +33,22 @@ class Trial:
         return self._spikes
 
     @property
-    def hand_pos(self) -> np.ndarray:
-        return self._hand_pos
+    def hand_pos_x(self) -> np.ndarray:
+        """A single numpy item represents the x information of the hand."""
+        return self._hand_pos[0, self.valid_end]
+
+    @property
+    def hand_pos_y(self) -> np.ndarray:
+        """A single numpy item represents the y information of the hand."""
+        return self._hand_pos[1, self.valid_end]
+
+    @property
+    def hand_pos_all_x(self) -> np.ndarray:
+        return self._hand_pos[0, :]
+
+    @property
+    def hand_pos_all_y(self) -> np.ndarray:
+        return self._hand_pos[1, :]
 
     @property
     def firing_rate(self) -> np.ndarray:
@@ -72,6 +88,11 @@ class RetrieveData:
         self._X = np.zeros((self.trail_num * self.angle_num, self.neuro_num))
         self._y = np.zeros(self.trail_num * self.angle_num)
 
+        # Assign the hand positions, which is going to be the label in linear regression.
+        self._hand_position_x = []
+        self._hand_position_x = []
+        self._hand_positions = defaultdict(list)
+
         # Fill dataset
         self.assign_dataset()
 
@@ -84,11 +105,14 @@ class RetrieveData:
                 self._X[pre_idx + angle_idx, :] = single_trail.firing_rate
                 self._y[pre_idx + angle_idx] = angle_idx
 
+                self._hand_positions['x'].append(single_trail.hand_pos_all_x)
+                self._hand_positions['y'].append(single_trail.hand_pos_all_y)
+
             pre_idx += self.angle_num
 
     @property
     def X(self) -> np.ndarray:
-        """Data size of (trail_num x angle_num, 98)"""
+        """Firing rate, Data size of (trail_num x angle_num, 98)"""
         return self._X
 
     @X.setter
@@ -97,12 +121,25 @@ class RetrieveData:
 
     @property
     def y(self) -> np.ndarray:
-        """Data size of (trail_num x angle_num, )"""
+        """Classification true label (i.e., reaching angle indices), Data size of (trail_num x angle_num, )"""
         return self._y
 
     @y.setter
     def y(self, val: np.ndarray) -> None:
-        self._y = val;
+        self._y = val
+
+    @property
+    def hand_position_x(self) -> np.ndarray:
+        pass
+
+    @property
+    def hand_position_y(self) -> np.ndarray:
+        pass
+
+    @property
+    def hand_positions(self) -> t.Dict:
+        """All hand position information."""
+        return self._hand_positions
 
 
 if __name__ == "__main__":

@@ -17,8 +17,19 @@ from sklearn import metrics
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+from matplotlib import rcParams
 
 from preprocess import RetrieveData
+
+# Configure the global configuration for plotting
+plot_config = {
+    "font.family": 'Times New Roman',
+    "font.size": 16,
+    "mathtext.fontset": 'stix',
+    "axes.titlesize": 20
+}
+rcParams.update(plot_config)
 
 
 class AvgMeter:
@@ -97,7 +108,29 @@ class Trainer:
 
     def initial_position_checker(self):
         """Check the initial position of two hands to see whether this can improve the model performance or not."""
-        pass
+        # the initial position of all data
+        self.model.fit(self.training_data.X, self.training_data.y)
+
+        time_idx = 400
+        x_0 = np.asarray([item[time_idx] for item in self.training_data.hand_positions['x']])
+        y_0 = np.asarray([item[time_idx] for item in self.training_data.hand_positions['y']])
+
+        labels = np.unique(self.training_data.y)
+        fig = plt.figure(figsize=(10, 10))
+        for label in labels:
+            indices = np.where(self.test_data.y == label)
+            plt.scatter(x_0[indices[0]], y_0[indices[0]], label=label)
+
+        y = self.model.predict(np.asarray([self.test_data.X[0, :]]))
+        print(y)
+        plt.scatter(self.test_data.hand_positions['x'][0][0], self.test_data.hand_positions['y'][0][0])
+
+        plt.legend()
+        plt.show()
+        test_data = [[xs[0], ys[0]] for xs, ys in zip(self.test_data.hand_positions['x'], self.test_data.hand_positions[
+            'y'])]
+        y_pred = self.model.predict(np.asarray(test_data))
+        print(metrics.accuracy_score(self.test_data.y, y_pred))
 
     def run(self):
         """Parameters tuning"""
@@ -116,4 +149,5 @@ if __name__ == "__main__":
 
     trainer = Trainer(mat_path)
     # trainer.k_fold_cv(10)
-    trainer.run()
+    # trainer.run()
+    trainer.initial_position_checker()
