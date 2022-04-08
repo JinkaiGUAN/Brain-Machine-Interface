@@ -53,14 +53,16 @@ class Trial:
     @property
     def firing_rate(self) -> np.ndarray:
         # data size: (98, )
+        # todo: The mean has been changed to sum.
         if self.valid_end == -1:
-            return np.mean(self._spikes[self.valid_start:], axis=1)
+            return np.sum(self._spikes[self.valid_start:], axis=1)
         else:
-            return np.mean(self._spikes[self.valid_start: self.valid_end], axis=1)
+            return np.sum(self._spikes[self.valid_start: self.valid_end], axis=1)
 
 
 class RetrieveData:
-    def __init__(self, data_path: t.Union[np.ndarray, str], valid_start: int = 0, valid_end: int = -1) -> None:
+    def __init__(self, data_path: t.Union[np.ndarray, str], bin_width: int = 20, valid_start: int = 0, valid_end: int
+        = 500) -> None:
         """The data retriever.
 
         Args:
@@ -77,6 +79,7 @@ class RetrieveData:
 
         self.valid_start = valid_start
         self.valid_end = valid_end
+        self.bin_width = bin_width
 
         # retrieve data information
         self.trail_num = self.data.shape[0]
@@ -85,6 +88,7 @@ class RetrieveData:
 
         # Initialize X and Y, where X stores the firing rate for each trail, and y stores the corresponding reaching
         # angele
+        # todo: change the data type
         self._X = np.zeros((self.trail_num * self.angle_num, self.neuro_num))
         self._y = np.zeros(self.trail_num * self.angle_num)
 
@@ -101,7 +105,7 @@ class RetrieveData:
         pre_idx = 0
         for trail_idx in range(self.trail_num):
             for angle_idx in range(self.angle_num):
-                single_trail = Trial(self.data[trail_idx, angle_idx], self.valid_start, self.valid_end)
+                single_trail = Trial(self.data[trail_idx, angle_idx], 0, -1)
                 self._X[pre_idx + angle_idx, :] = single_trail.firing_rate
                 self._y[pre_idx + angle_idx] = angle_idx
 
@@ -109,6 +113,15 @@ class RetrieveData:
                 self._hand_positions['y'].append(single_trail.hand_pos_all_y)
 
             pre_idx += self.angle_num
+
+    def assign_dataset_v2(self):
+        """In this function, bin will be used to sample the data within the same time sliding window."""
+        for trail_idx in range(self.trail_num):
+            for angle_idx in range(self.angle_num):
+                # Retrieve the data by the bins
+                pass
+
+
 
     @property
     def X(self) -> np.ndarray:

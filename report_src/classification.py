@@ -148,6 +148,6 @@ if __name__ == "__main__":
     # classifier = Classifier(mat_path)
 
     trainer = Trainer(mat_path)
-    # trainer.k_fold_cv(10)
+    trainer.k_fold_cv(10)
     # trainer.run()
-    trainer.initial_position_checker()
+    # trainer.initial_position_checker()
