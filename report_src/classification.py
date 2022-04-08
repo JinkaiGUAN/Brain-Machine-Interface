@@ -93,9 +93,9 @@ class Trainer:
             self.test_data = RetrieveData(self.data[idxes[51:], :])
 
             # Deploy PCA
-            self.pca.fit(self.training_data.X)
-            self.training_data.X = self.pca.transform(self.training_data.X)
-            self.test_data.X = self.pca.transform(self.test_data.X)
+            # self.pca.fit(self.training_data.X)
+            # self.training_data.X = self.pca.transform(self.training_data.X)
+            # self.test_data.X = self.pca.transform(self.test_data.X)
 
             self.model.fit(self.training_data.X, self.training_data.y)
             y_pred = self.model.predict(self.test_data.X)
@@ -148,6 +148,6 @@ if __name__ == "__main__":
     # classifier = Classifier(mat_path)
 
     trainer = Trainer(mat_path)
-    trainer.k_fold_cv(10)
+    trainer.k_fold_cv(2)
     # trainer.run()
     # trainer.initial_position_checker()
