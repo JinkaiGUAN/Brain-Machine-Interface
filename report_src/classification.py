@@ -197,6 +197,12 @@ class Estimation: #
         return label
 
     def test(self):
+        predicts = []
+        trues = []
+
+        correct_count = 0
+        sampling_data_num = 0
+
         for trail_idx in range(self.trail_num):
             for angle_idx in range(self.angle_num):
                 raw_single_trail = Trial(self.data[trail_idx, angle_idx], 0, -1)
@@ -205,8 +211,14 @@ class Estimation: #
 
                     # The all spikes for this specified time window
                     spikes = raw_single_trail.raw_firing_rate
-                    label = self.classifier_predict(spikes)
+                    label = self.classifier_predict(spikes)#
 
+                    # calculate classification accuracy
+                    if label == angle_idx:
+                        correct_count += 1
+                    sampling_data_num += 1
+
+        print("classification accuracy: ", np.round(correct_count / sampling_data_num, 3))
 
     def run(self):
         """Main function to run the whole process"""
