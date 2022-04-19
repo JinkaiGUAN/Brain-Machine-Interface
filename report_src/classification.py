@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 from matplotlib import rcParams
 
 from preprocess import RetrieveData
+from preprocess import Trial
 
 # Configure the global configuration for plotting
 plot_config = {
@@ -49,9 +50,11 @@ class AvgMeter:
 
 
 class Classifier:
-    def __init__(self, params: t.Dict = None) -> None:
+    def __init__(self, model_name: str = None, params: t.Dict = None) -> None:
         """In this project, accuracy can be more important than MSE, thus, in the comparison of accuracy of two
         naive classifiers, we concluded that KNN is more robust for firring rate data."""
+
+        # todo: add more techniques in model name;
         params = {
             "n_neighbors": 30,
             "algorithm": "ball_tree"
@@ -63,16 +66,16 @@ class Classifier:
     def fit(self, X: np.ndarray, y: np.ndarray) -> None:
         self.model.fit(X, y)
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
-        return self.model.predict(X)
+    def predict(self, X: np.ndarray) -> int:
+        return int(self.model.predict(X).item())
 
 
 class Trainer:
     def __init__(self, data_path: str) -> None:
         self.data = scio.loadmat(data_path).get('trial')
 
-        self.training_data = RetrieveData(self.data[:51, :], valid_start=0, valid_end=340)
-        self.test_data = RetrieveData(self.data[51:, :], valid_start=0, valid_end=340)
+        self.training_data = RetrieveData(self.data[:51, :], valid_start=0, valid_end=340, isClassification=True)
+        self.test_data = RetrieveData(self.data[51:, :], valid_start=0, valid_end=340, isClassification=True)
 
         self.model = Classifier()
         self.pca = PCA(n_components=95)
@@ -89,8 +92,10 @@ class Trainer:
             idxes = list(range(trial_num))
             random.shuffle(idxes)
 
-            self.training_data = RetrieveData(self.data[idxes[:51], :])
-            self.test_data = RetrieveData(self.data[idxes[51:], :])
+            # end =
+            self.training_data = RetrieveData(self.data[idxes[:51], :], valid_start=0, valid_end=-1,
+                                              isClassification=True)
+            self.test_data = RetrieveData(self.data[idxes[51:], :], valid_start=0, valid_end=-1, isClassification=True)
 
             # Deploy PCA
             # self.pca.fit(self.training_data.X)
@@ -140,6 +145,78 @@ class Trainer:
             print("{:-^60}".format(f" n_component = {n_component} "))
             self.k_fold_cv()
 
+    def classification_linear(self):
+        pass
+
+    def velocity_checker(self):
+        self.training_data.hand_position_x
+
+    def test(self):
+        """Test function for all."""
+        pass
+
+
+class Estimation: #
+    def __init__(self, data_path: str):
+        # bin windows
+        self.window_width = 300
+        self.bin_width = 30
+
+        self.data = scio.loadmat(data_path).get('trial')
+
+        params = {
+            "n_neighbors": 30,
+            "algorithm": "ball_tree",
+        }
+        self.classifier = Classifier(model_name='KNN', params=params)
+
+        # classification data
+        self.classification_training_data = RetrieveData(self.data[:51, :], valid_start=0, valid_end=340, isClassification=True)
+
+        # retrieve data information
+        self.trail_num = self.data.shape[0]
+        self.angle_num = self.data.shape[1]
+        self.neuro_num = self.data[0, 0][1].shape[0]
+
+    def train_model(self) -> None:
+        # train the classification model
+        self.classifier.fit(self.classification_training_data.X, self.classification_training_data.y)
+
+    def classifier_predict(self, x: np.ndarray) -> int:
+        time_length = x.shape[1]
+
+        threshold = 340
+        # time_step = threshold if time_length > threshold else -1
+        if time_length <= threshold:
+            x = np.mean(x, axis=1)
+        else:
+            x = np.mean(x[:, :threshold], axis=1)
+
+        label = self.classifier.predict(np.asarray([x.tolist()]))
+
+        return label
+
+    def test(self):
+        for trail_idx in range(self.trail_num):
+            for angle_idx in range(self.angle_num):
+                raw_single_trail = Trial(self.data[trail_idx, angle_idx], 0, -1)
+                for _start in range(0, len(raw_single_trail) - self.window_width + 1, self.bin_width):
+                    raw_single_trail.valid_start, raw_single_trail.valid_end = 0, _start + self.window_width
+
+                    # The all spikes for this specified time window
+                    spikes = raw_single_trail.raw_firing_rate
+                    label = self.classifier_predict(spikes)
+
+
+    def run(self):
+        """Main function to run the whole process"""
+        # Train the model
+        self.train_model()
+
+        # test the model
+        self.test()
+
+
 
 if __name__ == "__main__":
     src_dir = os.path.join(os.path.abspath(__file__), '..')
@@ -147,7 +224,11 @@ if __name__ == "__main__":
 
     # classifier = Classifier(mat_path)
 
-    trainer = Trainer(mat_path)
-    trainer.k_fold_cv(2)
-    # trainer.run()
-    # trainer.initial_position_checker()
+    # trainer = Trainer(mat_path)
+    # trainer.k_fold_cv(1)
+    # # trainer.run()
+    # # trainer.initial_position_checker()
+    #
+    # trainer.velocity_checker()
+    estimation = Estimation(mat_path)
+    estimation.run()
