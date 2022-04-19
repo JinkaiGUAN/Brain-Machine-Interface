@@ -74,8 +74,9 @@ class RegressionData:
 
         fr_Data = fr_Data[:, 1:]
         handPos = handPos[:, 1:]
+        Spikes = self.data[trailIndex, label-1][1]
 
-        return fr_Data.T, handPos.T
+        return Spikes.T, fr_Data.T, handPos.T
 
 
 class RegressionModel:
@@ -91,6 +92,8 @@ class RegressionModel:
                      '8': RegressionData(dataPath, 8, winWidth=winWidth, bin=bin),
                      }
         self.approach = approach
+        self.winSize = winWidth
+        self.bin = bin
         # self.model = self.set_model()
         if self.approach == 'LinearRegression':
             self.models = {'1': self.set_model(),
@@ -116,14 +119,23 @@ class RegressionModel:
     def predict(self,fireRate, label):
         if self.approach == 'LinearRegression':
             l = str(label)
+            fireRate = fireRate.reshape([98, 1])
             posPredict = np.array(self.models[l].predict(fireRate))
             return posPredict
+
+    def getFR(self, Spikes):
+        fireRate = np.sum(Spikes[- (self.winSize+1): -1, :], axis=0).reshape([98, 1])
+        return fireRate
 
 
 if __name__ == '__main__':
     regressionAgent = RegressionModel(short_data_path)
     regressionAgent.fit()
 
+    testSpike = np.ones((320, 98))  # The spike data need to be tested, 320 is an example of the time length
+    testFR = regressionAgent.getFR(testSpike) # get the fire rate through Spike data
+    # Label = Classification(testSpike) # get the label by input the spike data
+    # pre_pos = regressionAgent.predict(regressionAgent.data['1'].data_fr[50:80, :], 1) # predict the position
     pre_pos = regressionAgent.predict(regressionAgent.data['1'].data_fr[50:80, :], 1)
     real_pos = regressionAgent.data['1'].handPos[50:80, :]
     print(pre_pos - real_pos)
