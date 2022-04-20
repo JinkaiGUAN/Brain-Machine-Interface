@@ -118,16 +118,19 @@ class Estimation:
                 # plot the graph
                 if angle_idx not in angles_set:
                     angles_set.add(angle_idx)
-                    plt.plot(raw_single_trail.hand_pos_all_x, raw_single_trail.hand_pos_all_y, c=self.colors[angle_idx],
+                    plt.plot(hand_positions_x, hand_positions_y, c=self.colors[angle_idx],
                              label=f"{self.angle_mapping[angle_idx]}$^\circ$")
-                plt.plot(raw_single_trail.hand_pos_all_x, raw_single_trail.hand_pos_all_y, c=self.colors[angle_idx])
+
                 plt.plot(hand_positions_x, hand_positions_y, c=self.colors[angle_idx])
+                plt.plot(raw_single_trail.hand_pos_all_x, raw_single_trail.hand_pos_all_y, c="black")
 
         plt.xlabel("Distance along x-axis")
         plt.ylabel("Distance along y-axis")
         plt.title("Monkey hand position distribution")
         plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
         plt.tight_layout()
+        os.makedirs("../figures", exist_ok=True)
+        plt.savefig("../figures/prediction.svg", format='svg', dpi=1600, bbox_inches='tight')
         plt.show()
         print("classification accuracy: ", np.round(correct_count / sampling_data_num, 3))
 

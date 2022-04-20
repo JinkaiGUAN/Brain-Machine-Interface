@@ -1,0 +1,39 @@
+Index: report_src/Estimator.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+># -*- coding: UTF-8 -*-\r\n\"\"\"\r\n@Project : 3-coursework\r\n@File    : estimation.py\r\n@IDE     : PyCharm\r\n@Author  : Peter\r\n@Date    : 19/04/2022 16:59\r\n@Brief   :\r\n\"\"\"\r\nimport numpy as np\r\nimport scipy.io as scio\r\n\r\nimport matplotlib.pyplot as plt\r\nfrom matplotlib import rcParams\r\n\r\nfrom preprocess import RetrieveData\r\nfrom preprocess import Trial\r\nfrom classification import Classifier\r\nfrom Regression import RegressionModel\r\n\r\n\r\n# Configure the global configuration for plotting\r\nplot_config = {\r\n    \"font.family\": 'Times New Roman',\r\n    \"font.size\": 24,\r\n    \"mathtext.fontset\": 'stix',\r\n    \"axes.titlesize\": 30\r\n}\r\nrcParams.update(plot_config)\r\n\r\n\r\nclass Estimation:\r\n    def __init__(self, data_path: str):\r\n        # bin windows\r\n        self.window_width = 300\r\n        self.bin_width = 30\r\n\r\n        self.data = scio.loadmat(data_path).get('trial')\r\n\r\n        params = {\r\n            \"n_neighbors\": 30,\r\n            \"algorithm\": \"ball_tree\",\r\n        }\r\n        self.classifier = Classifier(model_name='KNN', params=params)\r\n        self.regressionAgent = RegressionModel(data_path)\r\n\r\n        # classification data\r\n        self.classification_training_data = RetrieveData(self.data[:51, :], valid_start=0, valid_end=340,\r\n                                                         isClassification=True)\r\n\r\n        # retrieve data information\r\n        self.trail_num = self.data.shape[0]\r\n        self.angle_num = self.data.shape[1]\r\n        self.neuro_num = self.data[0, 0][1].shape[0]\r\n\r\n        # color configurations\r\n        self.colors = [plt.cm.tab20(i) for i in range(self.angle_num)]\r\n        self.angle_mapping = [30, 70, 110, 150, 190, 230, 310, 350]\r\n\r\n    def train_model(self) -> None:\r\n        # train the classification model\r\n        self.classifier.fit(self.classification_training_data.X, self.classification_training_data.y)\r\n        self.regressionAgent.fit()\r\n\r\n    def classifier_predict(self, x: np.ndarray) -> int:\r\n        time_length = x.shape[1]\r\n\r\n        threshold = 340\r\n        # time_step = threshold if time_length > threshold else -1\r\n        if time_length <= threshold:\r\n            x = np.mean(x, axis=1)\r\n        else:\r\n            x = np.mean(x[:, :threshold], axis=1)\r\n\r\n        label = self.classifier.predict(np.asarray([x.tolist()]))\r\n\r\n        return label\r\n\r\n    def test(self):\r\n\r\n        fig = plt.figure(figsize=(13, 10))\r\n\r\n        # helper parameters for accuracy calculation use\r\n        correct_count = 0\r\n        sampling_data_num = 0\r\n        angles_set = set()\r\n\r\n        for trail_idx in range(self.trail_num):\r\n            for angle_idx in range(self.angle_num):\r\n                raw_single_trail = Trial(self.data[trail_idx, angle_idx], 0, -1)\r\n\r\n                # predict hand position\r\n                hand_positions_x = []\r\n                hand_positions_y = []\r\n                for _start in range(0, len(raw_single_trail) - self.window_width + 1, self.bin_width):\r\n                    raw_single_trail.valid_start, raw_single_trail.valid_end = 0, _start + self.window_width\r\n\r\n                    # The all spikes for this specified time window\r\n                    spikes = raw_single_trail.raw_firing_rate\r\n                    fireRate = self.regressionAgent.getFR(spikes.T)\r\n\r\n                    # predict label\r\n                    label = self.classifier_predict(spikes)\r\n                    pre_pos = self.regressionAgent.predict(fireRate, label+1)\r\n                    pre_pos = np.ravel(pre_pos)\r\n\r\n                    # hand position\r\n                    hand_pos_x_pred = pre_pos[0]\r\n                    hand_pos_y_pred = pre_pos[1]\r\n                    hand_positions_x.append(hand_pos_x_pred)\r\n                    hand_positions_y.append(hand_pos_y_pred)\r\n\r\n                    # calculate classification accuracy\r\n                    if label == angle_idx:\r\n                        correct_count += 1\r\n                    sampling_data_num += 1\r\n\r\n                # plot the graph\r\n                if angle_idx not in angles_set:\r\n                    angles_set.add(angle_idx)\r\n                    plt.plot(raw_single_trail.hand_pos_all_x, raw_single_trail.hand_pos_all_y, c=self.colors[angle_idx],\r\n                             label=f\"{self.angle_mapping[angle_idx]}$^\\circ$\")\r\n                plt.plot(raw_single_trail.hand_pos_all_x, raw_single_trail.hand_pos_all_y, c=self.colors[angle_idx])\r\n                plt.plot(hand_positions_x, hand_positions_y, c=self.colors[angle_idx])\r\n\r\n        plt.xlabel(\"Distance along x-axis\")\r\n        plt.ylabel(\"Distance along y-axis\")\r\n        plt.title(\"Monkey hand position distribution\")\r\n        plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')\r\n        plt.tight_layout()\r\n        plt.show()\r\n        print(\"classification accuracy: \", np.round(correct_count / sampling_data_num, 3))\r\n\r\n    def run(self):\r\n        \"\"\"Main function to run the whole process\"\"\"\r\n        # Train the model\r\n        self.train_model()\r\n\r\n        # test the model\r\n        self.test()\r\n\r\n\r\nif __name__ == \"__main__\":\r\n    import os\r\n\r\n    src_dir = os.path.join(os.path.abspath(__file__), '..')\r\n    mat_path = os.path.join(src_dir, 'monkeydata_training.mat')\r\n\r\n    # classifier = Classifier(mat_path)\r\n\r\n    # trainer = Trainer(mat_path)\r\n    # trainer.k_fold_cv(1)\r\n    # # trainer.run()\r\n    # # trainer.initial_position_checker()\r\n    #\r\n    # trainer.velocity_checker()\r\n    estimation = Estimation(mat_path)\r\n    estimation.run()
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/report_src/Estimator.py b/report_src/Estimator.py
+--- a/report_src/Estimator.py	(revision d8a434b36fbd1baf7e342b1710287e2bae132c58)
++++ b/report_src/Estimator.py	(date 1650460984297)
+@@ -118,16 +118,19 @@
+                 # plot the graph
+                 if angle_idx not in angles_set:
+                     angles_set.add(angle_idx)
+-                    plt.plot(raw_single_trail.hand_pos_all_x, raw_single_trail.hand_pos_all_y, c=self.colors[angle_idx],
++                    plt.plot(hand_positions_x, hand_positions_y, c=self.colors[angle_idx],
+                              label=f"{self.angle_mapping[angle_idx]}$^\circ$")
+-                plt.plot(raw_single_trail.hand_pos_all_x, raw_single_trail.hand_pos_all_y, c=self.colors[angle_idx])
++
+                 plt.plot(hand_positions_x, hand_positions_y, c=self.colors[angle_idx])
++                plt.plot(raw_single_trail.hand_pos_all_x, raw_single_trail.hand_pos_all_y, c="black")
+ 
+         plt.xlabel("Distance along x-axis")
+         plt.ylabel("Distance along y-axis")
+         plt.title("Monkey hand position distribution")
+         plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
+         plt.tight_layout()
++        os.makedirs("../figures", exist_ok=True)
++        plt.savefig("../figures/prediction.svg", format='svg', dpi=1600, bbox_inches='tight')
+         plt.show()
+         print("classification accuracy: ", np.round(correct_count / sampling_data_num, 3))
+ 
+@@ -155,4 +158,4 @@
+     #
+     # trainer.velocity_checker()
+     estimation = Estimation(mat_path)
+-    estimation.run()
+\ No newline at end of file
++    estimation.run()
