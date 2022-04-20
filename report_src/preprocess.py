@@ -77,19 +77,32 @@ class Trial:
         # data size: (98, )
         # It protects from retrieving firing rate without deploying start and end indices.
         if self._valid_end == 0 and self._valid_start == 0:
-            raise NotImplemented(f"The start and end indices have not been assigned for {self.__class__.__name__}!")
+            raise NotImplementedError(f"The start and end indices have not been assigned for"
+                                      f" {self.__class__.__name__}!")
 
-        # todo: The mean has been changed to sum.
+        # todo: using mean is more reasonable.
         if self._valid_end == -1:
-            return np.sum(self._spikes[:, self._valid_start:], axis=1)
+            return np.mean(self._spikes[:, self._valid_start:], axis=1)
         else:
-            return np.sum(self._spikes[:, self._valid_start: self._valid_end], axis=1)
+            return np.mean(self._spikes[:, self._valid_start: self._valid_end], axis=1)
 
+    @property
+    def raw_firing_rate(self) -> np.ndarray:
+        """Return the firing rate raw data, i.e., the raw spiking data, with data size of (98, n), where n is the
+        time steps."""
+        if self._valid_end == 0 and self._valid_start == 0:
+            raise NotImplementedError(f"The start and end indices have not been assigned for"
+                                      f" {self.__class__.__name__}!")
+
+        if self._valid_end == -1:
+            return self._spikes[:, self._valid_start:]
+        else:
+            return self._spikes[:, self._valid_start: self._valid_end]
 
 
 class RetrieveData:
     def __init__(self, data_path: t.Union[np.ndarray, str], bin_width: int = 20, window_width: int = 300,
-                 valid_start: int = 0, valid_end: int = 500) -> None:
+                 valid_start: int = 0, valid_end: int = 340, isClassification: bool = True) -> None:
         """The data retriever.
 
         Args:
@@ -98,8 +111,10 @@ class RetrieveData:
                 or the raw numpy data.
             bin_width (int): The sampling step.
             window_width (int): The size of time window.
-            valid_start (int): The start of the time window.
-            valid_end (int): The end of the time window.
+            valid_start (int): The start of the time window, classification used only.
+            valid_end (int): The end of the time window, classification used only.
+            isClassification (bool): The flag that judges that whether the data is prepared for classification or
+                linear regression.
         """
         if isinstance(data_path, str):
             self.data = scio.loadmat(data_path).get('trial')
@@ -110,6 +125,7 @@ class RetrieveData:
         self.window_width = window_width
         self.valid_start = valid_start
         self.valid_end = valid_end
+        self.isClassification = isClassification
 
         # retrieve data information
         self.trail_num = self.data.shape[0]
@@ -118,11 +134,13 @@ class RetrieveData:
 
         # Initialize X and Y, where X stores the firing rate for each trail, and y stores the corresponding reaching
         # angele
-        # todo: change the data type
-        # self._X = np.zeros((self.trail_num * self.angle_num, self.neuro_num))
-        # self._y = np.zeros(self.trail_num * self.angle_num)
-        self._X = []
-        self._y = []
+        if self.isClassification:
+            self._X = np.zeros((self.trail_num * self.angle_num, self.neuro_num))
+            self._y = np.zeros(self.trail_num * self.angle_num)
+        else:
+            self._X = []
+            self._X_classification = []
+            self._y = []
 
         # Assign the hand positions, which is going to be the label in linear regression.
         self._hand_position_x = []
@@ -130,15 +148,19 @@ class RetrieveData:
         self._hand_positions = defaultdict(list)
 
         # Fill dataset
-        # self.assign_dataset()
-        self.assign_dataset_v2()
+        if self.isClassification:
+            self.assign_dataset()
+        else:
+            self.assign_dataset_v2()
 
     def assign_dataset(self):
-        """Retrieve data from raw input data."""
+        """Retrieve data from raw input data, which should be used for KNN classification."""
+
+        # todo: check whether this can be valid using for KNN or not.
         pre_idx = 0
         for trail_idx in range(self.trail_num):
             for angle_idx in range(self.angle_num):
-                single_trail = Trial(self.data[trail_idx, angle_idx], 0, -1)
+                single_trail = Trial(self.data[trail_idx, angle_idx], self.valid_start, self.valid_end)
                 self._X[pre_idx + angle_idx, :] = single_trail.firing_rate
                 self._y[pre_idx + angle_idx] = angle_idx
 
@@ -155,9 +177,11 @@ class RetrieveData:
                 single_trail = Trial(self.data[trail_idx, angle_idx])
                 # todo: check the time window here
                 for _start in range(0, len(single_trail) - self.window_width + 1, self.bin_width):
-                    single_trail.valid_start, single_trail.valid_end = _start, _start + self.window_width
+                    # The start is from 0
+                    single_trail.valid_start, single_trail.valid_end = 0, _start + self.window_width
                     # Assign firing rate and reaching angles
-                    self._X.append(single_trail.firing_rate.tolist())
+                    # self._X.append(single_trail.firing_rate.tolist())
+                    self._X.append(single_trail.raw_firing_rate)
                     self._y.append(angle_idx)
 
                     # retrieve hand positions, using float value
@@ -172,6 +196,11 @@ class RetrieveData:
     @X.setter
     def X(self, val: np.ndarray) -> None:
         self._X = val
+
+    @property
+    def X_classification(self) -> np.ndarray:
+        """The firring rate for classification use only."""
+        return np.asarray(self._X_classification)
 
     @property
     def y(self) -> np.ndarray:

@@ -11,6 +11,7 @@ import numpy as np
 import scipy.io as scio
 from sklearn.linear_model import LinearRegression
 
+
 data_path = 'F:/Users/27339/Desktop/IC/Modules/BMI/Brain-Machine-Interface/report_src/monkeydata_training.mat'
 short_data_path = './monkeydata_training.mat'
 
@@ -119,13 +120,13 @@ class RegressionModel:
     def predict(self,fireRate, label):
         if self.approach == 'LinearRegression':
             l = str(label)
-            fireRate = fireRate.reshape([98, 1])
+            # fireRate = fireRate.reshape([98, 1])
             posPredict = np.array(self.models[l].predict(fireRate))
             return posPredict
 
     def getFR(self, Spikes):
         fireRate = np.sum(Spikes[- (self.winSize+1): -1, :], axis=0).reshape([98, 1])
-        return fireRate
+        return fireRate.T
 
 
 if __name__ == '__main__':
