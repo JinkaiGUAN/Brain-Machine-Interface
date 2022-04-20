@@ -1,11 +1,11 @@
 # -*- coding: UTF-8 -*-
 """
-@Project : 3-coursework 
+@Project : 3-coursework
 @File    : estimation.py
-@IDE     : PyCharm 
+@IDE     : PyCharm
 @Author  : Peter
-@Date    : 19/04/2022 16:59 
-@Brief   : 
+@Date    : 19/04/2022 16:59
+@Brief   :
 """
 import numpy as np
 import scipy.io as scio
@@ -16,6 +16,7 @@ from matplotlib import rcParams
 from preprocess import RetrieveData
 from preprocess import Trial
 from classification import Classifier
+from Regression import RegressionModel
 
 
 # Configure the global configuration for plotting
@@ -41,6 +42,7 @@ class Estimation:
             "algorithm": "ball_tree",
         }
         self.classifier = Classifier(model_name='KNN', params=params)
+        self.regressionAgent = RegressionModel(data_path)
 
         # classification data
         self.classification_training_data = RetrieveData(self.data[:51, :], valid_start=0, valid_end=340,
@@ -58,6 +60,7 @@ class Estimation:
     def train_model(self) -> None:
         # train the classification model
         self.classifier.fit(self.classification_training_data.X, self.classification_training_data.y)
+        self.regressionAgent.fit()
 
     def classifier_predict(self, x: np.ndarray) -> int:
         time_length = x.shape[1]
@@ -81,6 +84,7 @@ class Estimation:
         correct_count = 0
         sampling_data_num = 0
         angles_set = set()
+        flag = False
 
         for trail_idx in range(self.trail_num):
             for angle_idx in range(self.angle_num):
@@ -94,32 +98,43 @@ class Estimation:
 
                     # The all spikes for this specified time window
                     spikes = raw_single_trail.raw_firing_rate
+                    fireRate = self.regressionAgent.getFR(spikes.T)
 
                     # predict label
                     label = self.classifier_predict(spikes)
+                    pre_pos = self.regressionAgent.predict(fireRate, label+1)
+                    pre_pos = np.ravel(pre_pos)
+
                     # hand position
-                    hand_pos_x_pred = 1
-                    hand_pos_y_pred = 2
-                    hand_positions_x.append(hand_pos_x_pred)
-                    hand_positions_y.append(hand_pos_y_pred)
+                    hand_pos_x_pred = pre_pos[0]
+                    hand_pos_y_pred = pre_pos[1]
+                    hand_positions_x.append(float(hand_pos_x_pred))
+                    hand_positions_y.append(float(hand_pos_y_pred))
 
                     # calculate classification accuracy
                     if label == angle_idx:
                         correct_count += 1
                     sampling_data_num += 1
 
-                # plot the graph
+                # # plot the graph
+                if not flag:
+                    flag = True
+                    plt.plot(raw_single_trail.hand_pos_all_x, raw_single_trail.hand_pos_all_y, c="black", alpha=0.5,
+                             label="Original path")
+                plt.plot(raw_single_trail.hand_pos_all_x, raw_single_trail.hand_pos_all_y, c="black", alpha=0.5)
+
                 if angle_idx not in angles_set:
                     angles_set.add(angle_idx)
-                    plt.plot(hand_positions_x, hand_positions_y, c=f"{self.angle_mapping[angle_idx]}$^\circ$")
-
-                plt.plot(raw_single_trail.hand_pos_all_x, raw_single_trail.hand_pos_all_y, c="black")
+                    plt.plot(np.asarray(hand_positions_x), np.asarray(hand_positions_y), c=self.colors[angle_idx],
+                             label=f"{self.angle_mapping[angle_idx]}$^\circ$")
+                plt.plot(np.asarray(hand_positions_x), np.asarray(hand_positions_y), c=self.colors[angle_idx])
 
         plt.xlabel("Distance along x-axis")
         plt.ylabel("Distance along y-axis")
         plt.title("Monkey hand position distribution")
         plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
         plt.tight_layout()
+        os.makedirs("../figures", exist_ok=True)
         plt.savefig("../figures/prediction.svg", format='svg', dpi=1600, bbox_inches='tight')
         plt.show()
         print("classification accuracy: ", np.round(correct_count / sampling_data_num, 3))
