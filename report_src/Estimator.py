@@ -102,10 +102,11 @@ class Estimation:
                     # predict label
                     label = self.classifier_predict(spikes)
                     pre_pos = self.regressionAgent.predict(fireRate, label+1)
+                    pre_pos = np.ravel(pre_pos)
 
                     # hand position
-                    hand_pos_x_pred = pre_pos[0, 0]
-                    hand_pos_y_pred = pre_pos[0, 1]
+                    hand_pos_x_pred = pre_pos[0]
+                    hand_pos_y_pred = pre_pos[1]
                     hand_positions_x.append(hand_pos_x_pred)
                     hand_positions_y.append(hand_pos_y_pred)
 
