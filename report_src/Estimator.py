@@ -151,8 +151,10 @@ class Estimation:
 if __name__ == "__main__":
     import os
 
-    src_dir = os.path.join(os.path.abspath(__file__), '..')
-    mat_path = os.path.join(src_dir, 'monkeydata_training.mat')
+    #src_dir = os.path.join(os.path.abspath(__file__), '..')
+    #mat_path = os.path.join(src_dir, 'monkeydata_training.mat')
+    mat_path = '/Users/huangkexin/Desktop/BMI_compition/Brain-Machine-Interface/report_src/monkeydata_training.mat'
+    print(mat_path)
 
     # classifier = Classifier(mat_path)
 
