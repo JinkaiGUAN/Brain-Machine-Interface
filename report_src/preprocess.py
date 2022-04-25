@@ -10,7 +10,6 @@
 
 import os
 import typing as t
-from collections import deque
 from collections import defaultdict
 
 import numpy as np
@@ -98,6 +97,20 @@ class Trial:
             return self._spikes[:, self._valid_start:]
         else:
             return self._spikes[:, self._valid_start: self._valid_end]
+
+    @property
+    def split_firing_rate(self) -> np.ndarray:
+        """Split the firing rate, i.e., split the whole time window into 3 parts, and merge them."""
+        if self._valid_end == 0 and self._valid_start == 0:
+            raise NotImplementedError(f"The start and end indices have not been assigned for"
+                                      f" {self.__class__.__name__}!")
+
+        time_window = self.valid_end - self.valid_start
+        split_idx = time_window / 3
+
+        return np.concatenate((np.sum(self._spikes[:, 0:split_idx], axis=1),
+                               np.sum(self._spikes[:, split_idx: 2 * split_idx], axis=1),
+                               np.sum(self._spikes[:, 2 * split_idx: split_idx:], axis=1)), axis=0)
 
 
 class RetrieveData:
