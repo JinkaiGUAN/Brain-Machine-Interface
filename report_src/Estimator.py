@@ -131,13 +131,9 @@ class Estimation:
 
                     # predict label
                     label = self.classifier_predict(spikes)
-                    # pre_pos = self.regressionAgent.predict(fireRate, label+1)
-                    # pre_pos = np.ravel(pre_pos)
                     hand_pos_x_pred, hand_pos_y_pred = self.regression_predict(fireRate, label)
 
                     # hand position
-                    # hand_pos_x_pred = pre_pos[0]
-                    # hand_pos_y_pred = pre_pos[1]
                     hand_positions_x.append(float(hand_pos_x_pred))
                     hand_positions_y.append(float(hand_pos_y_pred))
 
@@ -206,3 +202,6 @@ if __name__ == "__main__":
     # trainer.velocity_checker()
     estimation = Estimation(mat_path)
     estimation.run()
+
+    # from sklearn.linear_model import LinearRegression
+    # LinearRegression()
