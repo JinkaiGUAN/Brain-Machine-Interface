@@ -106,11 +106,11 @@ class Trial:
                                       f" {self.__class__.__name__}!")
 
         time_window = self.valid_end - self.valid_start
-        split_idx = time_window / 3
+        split_idx = int(time_window / 3)
 
-        return np.concatenate((np.sum(self._spikes[:, 0:split_idx], axis=1),
+        return np.concatenate((np.sum(self._spikes[:, self.valid_start:split_idx], axis=1),
                                np.sum(self._spikes[:, split_idx: 2 * split_idx], axis=1),
-                               np.sum(self._spikes[:, 2 * split_idx: split_idx:], axis=1)), axis=0)
+                               np.sum(self._spikes[:, 2 * split_idx: self.valid_end], axis=1)), axis=0)
 
 
 class RetrieveData:
@@ -238,6 +238,7 @@ class RetrieveData:
     def hand_positions(self) -> t.Dict:
         """All hand position information."""
         return self._hand_positions
+
 
 
 if __name__ == "__main__":

@@ -57,7 +57,6 @@ class RegressionData:
 
         fr_Data = fr_Data[:, 1:]
         handPos = handPos[:, 1:]
-
         return fr_Data.T, handPos.T
 
     def getATrail(self, trailIndex, label):

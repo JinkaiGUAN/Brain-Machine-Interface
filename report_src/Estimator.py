@@ -20,6 +20,7 @@ from preprocess import RetrieveData
 from preprocess import Trial
 from classification import Classifier
 from Regression import RegressionModel
+from sampling_window_split import SPlitRegression
 
 
 # Configure the global configuration for plotting
@@ -36,7 +37,7 @@ class Estimation:
     def __init__(self, data_path: str):
         # bin windows
         self.window_width = 300
-        self.bin_width = 30
+        self.bin_width = 20
 
         self.data = scio.loadmat(data_path).get('trial')
 
@@ -46,9 +47,12 @@ class Estimation:
         }
         self.classifier = Classifier(model_name='KNN', params=params)
         self.regressionAgent = RegressionModel(data_path)
+        self.split_regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
+                                               window_width=self.window_width)
 
         # classification data
-        self.classification_training_data = RetrieveData(self.data[:51, :], valid_start=0, valid_end=340,
+        self.classification_training_data = RetrieveData(self.data[:51, :], bin_width=self.bin_width,
+                                                         window_width=self.window_width, valid_start=0, valid_end=340,
                                                          isClassification=True)
 
         # retrieve data information
@@ -65,6 +69,8 @@ class Estimation:
         self.classifier.fit(self.classification_training_data.X, self.classification_training_data.y)
         self.regressionAgent.fit()
 
+        self.split_regressor.fit()
+
     def classifier_predict(self, x: np.ndarray) -> int:
         time_length = x.shape[1]
 
@@ -79,11 +85,14 @@ class Estimation:
 
         return label
 
-    def regression_predict(self, fire_rate, label: int) -> t.Tuple[float, float]:
-        pre_pos = self.regressionAgent.predict(fire_rate, label + 1)
-        pre_pos = np.ravel(pre_pos)
+    def regression_predict(self, spikes: np.ndarray, label: int) -> t.Tuple[float, float]:
+        # fire_rate = self.regressionAgent.getFR(spikes.T)
+        # pre_pos = self.regressionAgent.predict(fire_rate, label + 1)
+        # pos_x, pos_y = np.ravel(pre_pos)
 
-        return pre_pos[0].item(), pre_pos[1].item()
+        pos_x, pos_y = self.split_regressor.predict(spikes, label)
+
+        return pos_x, pos_y
 
     def rsme_xy(self, pre_flatx: t.List, pre_flaty: t.List, flat_x: t.List, flat_y: t.List) -> float:
         squared_numbersx = [number ** 2 for number in pre_flatx]
@@ -127,11 +136,10 @@ class Estimation:
 
                     # The all spikes for this specified time window
                     spikes = raw_single_trail.raw_firing_rate
-                    fireRate = self.regressionAgent.getFR(spikes.T)
 
-                    # predict label
+                    # predict labe
                     label = self.classifier_predict(spikes)
-                    hand_pos_x_pred, hand_pos_y_pred = self.regression_predict(fireRate, label)
+                    hand_pos_x_pred, hand_pos_y_pred = self.regression_predict(spikes, label)
 
                     # hand position
                     hand_positions_x.append(float(hand_pos_x_pred))
