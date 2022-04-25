@@ -22,7 +22,7 @@ function [data] = Knn(trainingData, timeRange, K, splitRatio)
         otherwise
            exception = MException(['Please check the input variable numbers,' ...
                 ' you need to input training data and time range']);
-            throw(exception);
+           throw(exception);
     end
 
     % Reaching angle mapping
@@ -55,8 +55,7 @@ function [data] = Knn(trainingData, timeRange, K, splitRatio)
         preIdx = preIdx + Num.reachingAngle;
     end
     
-    %%% todo: perform k-fold cross-validation
-
+   
     % Get the size of all dataset
     [M.all, N] = size(data.X);
     % Shuffle the dataset 
@@ -64,17 +63,12 @@ function [data] = Knn(trainingData, timeRange, K, splitRatio)
     data.X = data.X(shuffleIdx, :);             % All data for features
     data.y = data.y(shuffleIdx, 1);             % All data for labels
     % Split the dataset into real training and testing set accoridng to ratio of
-    % 0.9, i.e., 10% of all data will be used as testing data, and cross
-    % validation will be used to veriy the algorithm.  
+    % 0.9, i.e., 10% of all data will be used as testing data.
     splitIdx = floor(M.all * splitRatio);
     data.trainingX = data.X(1 : splitIdx, :);   % traing dataset of features
     data.trainingY = data.y(1 : splitIdx, :);   % training datset of labels
     data.testX = data.X(splitIdx + 1 : end, :); % test dataset of features
     data.testY = data.y(splitIdx + 1 : end, :); % test dataset of labels
-    
-    % fixme: Visualize the data. Normally, there should be two dimension, x-axis should
-    % be the firing rate, and y axis is the label value? Also different sorts of
-    % class should be labelled with legend. 
     
     %%% Perform single KNN
     % Get the size of taining and testing dataset
@@ -84,42 +78,42 @@ function [data] = Knn(trainingData, timeRange, K, splitRatio)
     % Initialize disatance and prediction matrix
     Dis = zeros(M.train, 1);            % Distance matrix
     predictYTest = zeros(M.test, 1);    % Predicted labels for test dataset
-
-    % Calculate the distance between test dataset and training dataset
-    for n = 1 : M.test
-        % n controls the index of each trail in the test dataset.
-        for i = 1 : M.train
-            % i controls the index of each trial in the training dataset.
-            %%% This part is going to check the distance between trail `n` and
-            %%% trail `i` for N neuros. 
-            distance1 = 0;
-            for j = 1 : N
-                distance1 = distance1 + (data.testX(n, j) - data.trainingX(i, j)).^2;
-            end
-            Dis(i, 1) = distance1.^0.5;
-        end
-
-        % Get the minimun k distance 
-        [~, index] = sort(Dis);
-        for k = 1 : K
-            temp(k) = data.trainingY(index(k));
-        end
-        % Samping the data
-        table = tabulate(temp);
-        % Get the maxinum number of happening
-        maxCount = max(table(:, 2, :)); 
-        % Get the label of maxCount 
-        labelIdx = find(table(:, 2, :) == maxCount);
-        % Here we only select the first index
-        %%% todo: How to tackle the problem of the multiple label with the same
-        %%% counting number.
-        predictYTest(n) = table(labelIdx(1), 1);
-        fprintf('True label: %d Predict label: %d\n', data.testY(n, 1), predictYTest(n))        
-    end
-
-    % Calcualte the classification accuracy
-    acc = mean(predictYTest == data.testY(:, 1));
-    fprintf('Classification acc: %.2f\n', acc);
+   
+%     % Calculate the distance between test dataset and training dataset
+%     for n = 1 : M.test
+%         % n controls the index of each trail in the test dataset.
+%         for i = 1 : M.train
+%             % i controls the index of each trial in the training dataset.
+%             %%% This part is going to check the distance between trail `n` and
+%             %%% trail `i` for N neuros. 
+%             distance1 = 0;
+%             for j = 1 : N
+%                 distance1 = distance1 + (data.testX(n, j) - data.trainingX(i, j)).^2;
+%             end
+%             Dis(i, 1) = distance1.^0.5;
+%         end
+% 
+%         % Get the minimun k distance 
+%         [~, index] = sort(Dis);
+%         for k = 1 : K
+%             temp(k) = data.trainingY(index(k));
+%         end
+%         % Samping the data
+%         table = tabulate(temp);
+%         % Get the maxinum number of happening
+%         maxCount = max(table(:, 2, :)); 
+%         % Get the label of maxCount 
+%         labelIdx = find(table(:, 2, :) == maxCount);
+%         % Here we only select the first index
+%         %%% todo: How to tackle the problem of the multiple label with the same
+%         %%% counting number.
+%         predictYTest(n) = table(labelIdx(1), 1);
+%         fprintf('True label: %d Predict label: %d\n', data.testY(n, 1), predictYTest(n))        
+%     end
+% 
+%     % Calcualte the classification accuracy
+%     acc = mean(predictYTest == data.testY(:, 1));
+%     fprintf('Classification acc: %.2f\n', acc);
     
     %%% todo: Using cumulative gassuain function to fit the x and y data.
     
