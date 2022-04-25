@@ -14,6 +14,7 @@ import scipy.io as scio
 
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
+from sklearn.metrics import mean_squared_error
 
 from preprocess import RetrieveData
 from preprocess import Trial
@@ -78,7 +79,13 @@ class Estimation:
 
         return label
 
-    def rsmeXY(pre_flat: t.List, pre_flaty: t.List, flat_x: t.List, flat_y: t.List) -> float:
+    def regression_predict(self, fire_rate, label: int) -> t.Tuple[float, float]:
+        pre_pos = self.regressionAgent.predict(fire_rate, label + 1)
+        pre_pos = np.ravel(pre_pos)
+
+        return pre_pos[0].item(), pre_pos[1].item()
+
+    def rsme_xy(self, pre_flatx: t.List, pre_flaty: t.List, flat_x: t.List, flat_y: t.List) -> float:
         squared_numbersx = [number ** 2 for number in pre_flatx]
         squared_numbersy = [number ** 2 for number in pre_flaty]
         sum_list1 = [a + b for a, b in zip(squared_numbersx, squared_numbersy)]
@@ -89,7 +96,7 @@ class Estimation:
         sum_list2 = [a + b for a, b in zip(fsquared_numbersx, fsquared_numbersy)]
         s22 = np.sqrt(sum_list2)
 
-        rmsall = sqrt(mean_squared_error(s11, s22))
+        rmsall = np.sqrt(mean_squared_error(s11, s22)).item()
         return rmsall
 
     def test(self):
@@ -101,6 +108,12 @@ class Estimation:
         sampling_data_num = 0
         angles_set = set()
         flag = False
+
+        # Collect x and y position information
+        raw_flat_x = []
+        raw_flat_y = []
+        pre_flat_x = []
+        pre_flat_y = []
 
         for trail_idx in range(self.trail_num):
             for angle_idx in range(self.angle_num):
@@ -118,12 +131,13 @@ class Estimation:
 
                     # predict label
                     label = self.classifier_predict(spikes)
-                    pre_pos = self.regressionAgent.predict(fireRate, label+1)
-                    pre_pos = np.ravel(pre_pos)
+                    # pre_pos = self.regressionAgent.predict(fireRate, label+1)
+                    # pre_pos = np.ravel(pre_pos)
+                    hand_pos_x_pred, hand_pos_y_pred = self.regression_predict(fireRate, label)
 
                     # hand position
-                    hand_pos_x_pred = pre_pos[0]
-                    hand_pos_y_pred = pre_pos[1]
+                    # hand_pos_x_pred = pre_pos[0]
+                    # hand_pos_y_pred = pre_pos[1]
                     hand_positions_x.append(float(hand_pos_x_pred))
                     hand_positions_y.append(float(hand_pos_y_pred))
 
@@ -132,7 +146,12 @@ class Estimation:
                         correct_count += 1
                     sampling_data_num += 1
 
-                    # Collect the raw hand position data 
+                    # Collect the raw hand position data
+                    raw_flat_x.append(raw_single_trail.hand_pos_x)
+                    raw_flat_y.append(raw_single_trail.hand_pos_y)
+
+                pre_flat_x += hand_positions_x
+                pre_flat_y += hand_positions_y
 
                 # # plot the graph
                 if not flag:
@@ -146,6 +165,9 @@ class Estimation:
                     plt.plot(np.asarray(hand_positions_x), np.asarray(hand_positions_y), c=self.colors[angle_idx],
                              label=f"{self.angle_mapping[angle_idx]}$^\circ$")
                 plt.plot(np.asarray(hand_positions_x), np.asarray(hand_positions_y), c=self.colors[angle_idx])
+
+        rmse_val = self.rsme_xy(pre_flat_y, pre_flat_x, raw_flat_x, raw_flat_y)
+        print(f"The RMSE value is {rmse_val}.")
 
         plt.xlabel("Distance along x-axis")
         plt.ylabel("Distance along y-axis")
@@ -169,9 +191,9 @@ class Estimation:
 if __name__ == "__main__":
     import os
 
-    #src_dir = os.path.join(os.path.abspath(__file__), '..')
-    #mat_path = os.path.join(src_dir, 'monkeydata_training.mat')
-    mat_path = '/Users/huangkexin/Desktop/BMI_compition/Brain-Machine-Interface/report_src/monkeydata_training.mat'
+    src_dir = os.path.join(os.path.abspath(__file__), '..')
+    mat_path = os.path.join(src_dir, 'monkeydata_training.mat')
+    # mat_path = '/Users/huangkexin/Desktop/BMI_compition/Brain-Machine-Interface/report_src/monkeydata_training.mat'
     print(mat_path)
 
     # classifier = Classifier(mat_path)
