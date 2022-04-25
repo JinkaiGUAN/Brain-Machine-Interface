@@ -124,6 +124,8 @@ class Estimation:
                     # hand position
                     hand_pos_x_pred = pre_pos[0]
                     hand_pos_y_pred = pre_pos[1]
+
+
                     hand_positions_x.append(float(hand_pos_x_pred))
                     hand_positions_y.append(float(hand_pos_y_pred))
 
@@ -132,7 +134,7 @@ class Estimation:
                         correct_count += 1
                     sampling_data_num += 1
 
-                    # Collect the raw hand position data 
+                    # Collect the raw hand position data
 
                 # # plot the graph
                 if not flag:
