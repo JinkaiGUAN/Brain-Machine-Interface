@@ -7,6 +7,8 @@
 @Date    : 19/04/2022 16:59
 @Brief   :
 """
+import typing as t
+
 import numpy as np
 import scipy.io as scio
 
@@ -76,6 +78,20 @@ class Estimation:
 
         return label
 
+    def rsmeXY(pre_flat: t.List, pre_flaty: t.List, flat_x: t.List, flat_y: t.List) -> float:
+        squared_numbersx = [number ** 2 for number in pre_flatx]
+        squared_numbersy = [number ** 2 for number in pre_flaty]
+        sum_list1 = [a + b for a, b in zip(squared_numbersx, squared_numbersy)]
+        s11 = np.sqrt(sum_list1)
+
+        fsquared_numbersx = [number ** 2 for number in flat_x]
+        fsquared_numbersy = [number ** 2 for number in flat_y]
+        sum_list2 = [a + b for a, b in zip(fsquared_numbersx, fsquared_numbersy)]
+        s22 = np.sqrt(sum_list2)
+
+        rmsall = sqrt(mean_squared_error(s11, s22))
+        return rmsall
+
     def test(self):
 
         fig = plt.figure(figsize=(13, 10))
@@ -115,6 +131,8 @@ class Estimation:
                     if label == angle_idx:
                         correct_count += 1
                     sampling_data_num += 1
+
+                    # Collect the raw hand position data 
 
                 # # plot the graph
                 if not flag:
