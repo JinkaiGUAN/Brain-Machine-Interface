@@ -61,8 +61,8 @@ class RegressionData:
 
                     # Generate firing rate
                     firing_rate.append(raw_single_trail.split_firing_rate)
-                    hand_position_x.append(raw_single_trail.hand_pos_x)
-                    hand_position_y.append(raw_single_trail.hand_pos_y)
+                    hand_position_x.append(raw_single_trail.hand_pos_x - raw_single_trail.initial_hand_pos_x)
+                    hand_position_y.append(raw_single_trail.hand_pos_y - raw_single_trail.initial_hand_pos_y)
 
             all_data[angle_idx] = SingleAngleData(firing_rate, hand_position_x, hand_position_y)
 
@@ -82,10 +82,10 @@ class SPlitRegression:
     def fit(self):
         for label, data in self.data.items():
             position = np.concatenate((np.expand_dims(data.hand_position_x, axis=1),
-                                       np.expand_dims(data.hand_position_y, axis=1)), axis=1)
+                                       np.expand_dims(data.hand_position_y, axis=1)), axis=1)  # N * 2
             self.models[label].fit(data.firing_rate, position)
 
-    def predict(self, spikes: np.ndarray, label: int) -> t.Tuple[float, float]:
+    def predict(self, spikes: np.ndarray, label: int, initial_positions: np.ndarray) -> t.Tuple[float, float]:
         split_idx = int(self.window_width / 3)
         valid_start = spikes.shape[1] - self.window_width
 
@@ -95,8 +95,9 @@ class SPlitRegression:
             np.sum(spikes[:, 2 * split_idx:], axis=1)))
 
         hand_pos = self.models[label].predict([firing_rate])
+        initial_x, initial_y = initial_positions[0, 0].item(), initial_positions[1, 0].item()
 
-        return hand_pos[0, 0].item(), hand_pos[0, 1].item()
+        return hand_pos[0, 0].item() + initial_x, hand_pos[0, 1].item() + initial_y
 
 
 if __name__ == "__main__":

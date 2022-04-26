@@ -98,7 +98,7 @@ class Estimation:
         # pre_pos = self.regressionAgent.predict(fire_rate, label + 1)
         # pos_x, pos_y = np.ravel(pre_pos)
 
-        pos_x, pos_y = self.split_regressor.predict(spikes, label)
+        pos_x, pos_y = self.split_regressor.predict(spikes, label, initial_position)
 
         return pos_x, pos_y
 
@@ -145,7 +145,7 @@ class Estimation:
                     # The all spikes for this specified time window
                     spikes = raw_single_trail.raw_firing_rate
 
-                    # predict labe
+                    # predict label
                     label = self.classifier_predict(spikes)
                     initial_position = np.asarray(
                         [[raw_single_trail.initial_hand_pos_x], [raw_single_trail.initial_hand_pos_y]])
