@@ -9,18 +9,18 @@
 """
 import typing as t
 
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io as scio
-
-import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from sklearn.metrics import mean_squared_error
 
+from classification import Classifier
+from configuration import Configuration
 from preprocess import RetrieveData
 from preprocess import Trial
-from classification import Classifier
+from sampling_window_split import SPlitRegression
 from Regression import RegressionModel
-
 
 # Configure the global configuration for plotting
 plot_config = {
@@ -31,12 +31,14 @@ plot_config = {
 }
 rcParams.update(plot_config)
 
+config = Configuration()
+
 
 class Estimation:
     def __init__(self, data_path: str):
         # bin windows
-        self.window_width = 300
-        self.bin_width = 30
+        self.window_width = config.time_window_width
+        self.bin_width = config.bin_width
 
         self.data = scio.loadmat(data_path).get('trial')
 
@@ -45,10 +47,19 @@ class Estimation:
             "algorithm": "ball_tree",
         }
         self.classifier = Classifier(model_name='KNN', params=params)
-        self.regressionAgent = RegressionModel(data_path)
+
+        if config.model_name == config.split_regression:
+            self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
+                                         window_width=self.window_width, isRidge=False)
+        elif config.model_name == config.ridge_regression:
+            self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
+                                         window_width=self.window_width, isRidge=True)
+        elif config.model_name == config.simple_linear_regression:
+            self.regressor = RegressionModel(data_path)
 
         # classification data
-        self.classification_training_data = RetrieveData(self.data[:51, :], valid_start=0, valid_end=340,
+        self.classification_training_data = RetrieveData(self.data[:51, :], bin_width=self.bin_width,
+                                                         window_width=self.window_width, valid_start=0, valid_end=340,
                                                          isClassification=True)
 
         # retrieve data information
@@ -63,7 +74,7 @@ class Estimation:
     def train_model(self) -> None:
         # train the classification model
         self.classifier.fit(self.classification_training_data.X, self.classification_training_data.y)
-        self.regressionAgent.fit()
+        self.regressor.fit()
 
     def classifier_predict(self, x: np.ndarray) -> int:
         time_length = x.shape[1]
@@ -79,11 +90,21 @@ class Estimation:
 
         return label
 
-    def regression_predict(self, fire_rate, label: int) -> t.Tuple[float, float]:
-        pre_pos = self.regressionAgent.predict(fire_rate, label + 1)
-        pre_pos = np.ravel(pre_pos)
+    def regression_predict(self, spikes: np.ndarray, label: int, initial_position: np.ndarray) -> t.Tuple[float, float]:
+        """ The prediction part using regression.
 
-        return pre_pos[0].item(), pre_pos[1].item()
+        Args:
+            spikes ():
+            label ():
+            initial_position (np.ndarray): initial position of hands, with size of 2 by 1.
+
+        Returns:
+
+        """
+        # Using splitting window for data
+        pos_x, pos_y = self.regressor.predict(spikes, label, initial_position)
+
+        return pos_x, pos_y
 
     def rsme_xy(self, pre_flatx: t.List, pre_flaty: t.List, flat_x: t.List, flat_y: t.List) -> float:
         squared_numbersx = [number ** 2 for number in pre_flatx]
@@ -127,17 +148,14 @@ class Estimation:
 
                     # The all spikes for this specified time window
                     spikes = raw_single_trail.raw_firing_rate
-                    fireRate = self.regressionAgent.getFR(spikes.T)
 
                     # predict label
                     label = self.classifier_predict(spikes)
-                    # pre_pos = self.regressionAgent.predict(fireRate, label+1)
-                    # pre_pos = np.ravel(pre_pos)
-                    hand_pos_x_pred, hand_pos_y_pred = self.regression_predict(fireRate, label)
+                    initial_position = np.asarray(
+                        [[raw_single_trail.initial_hand_pos_x], [raw_single_trail.initial_hand_pos_y]])
+                    hand_pos_x_pred, hand_pos_y_pred = self.regression_predict(spikes, label, initial_position)
 
                     # hand position
-                    # hand_pos_x_pred = pre_pos[0]
-                    # hand_pos_y_pred = pre_pos[1]
                     hand_positions_x.append(float(hand_pos_x_pred))
                     hand_positions_y.append(float(hand_pos_y_pred))
 
@@ -174,9 +192,10 @@ class Estimation:
         plt.title("Monkey hand position distribution")
         plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
         plt.tight_layout()
-        os.makedirs("../figures", exist_ok=True)
-        plt.savefig("../figures/prediction.svg", format='svg', dpi=1600, bbox_inches='tight')
+        os.makedirs("figures", exist_ok=True)
+        plt.savefig("figures/prediction.svg", format='svg', dpi=1600, bbox_inches='tight')
         plt.show()
+        # plt.savefig("../figures/prediction.svg", format='svg', dpi=1600, bbox_inches='tight')
         print("classification accuracy: ", np.round(correct_count / sampling_data_num, 3))
 
     def run(self):
@@ -206,3 +225,6 @@ if __name__ == "__main__":
     # trainer.velocity_checker()
     estimation = Estimation(mat_path)
     estimation.run()
+
+    # from sklearn.linear_model import LinearRegression
+    # LinearRegression()

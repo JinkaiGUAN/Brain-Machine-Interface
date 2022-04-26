@@ -10,10 +10,12 @@
 import numpy as np
 import scipy.io as scio
 from sklearn.linear_model import LinearRegression
+from base_model import BaseModelRegression
 
 
 data_path = 'F:/Users/27339/Desktop/IC/Modules/BMI/Brain-Machine-Interface/report_src/monkeydata_training.mat'
 short_data_path = './monkeydata_training.mat'
+
 
 class RegressionData:
 
@@ -56,7 +58,6 @@ class RegressionData:
 
         fr_Data = fr_Data[:, 1:]
         handPos = handPos[:, 1:]
-
         return fr_Data.T, handPos.T
 
     def getATrail(self, trailIndex, label):
@@ -80,7 +81,7 @@ class RegressionData:
         return Spikes.T, fr_Data.T, handPos.T
 
 
-class RegressionModel:
+class RegressionModel(BaseModelRegression):
 
     def __init__(self, dataPath: str,  winWidth=300, bin=20, approach = 'LinearRegression'):
         self.data = {'1': RegressionData(dataPath, 1, winWidth=winWidth, bin=bin),
@@ -98,7 +99,7 @@ class RegressionModel:
         # self.model = self.set_model()
         if self.approach == 'LinearRegression':
             self.models = {'1': self.set_model(),
-                           '2':self.set_model(),
+                           '2': self.set_model(),
                            '3': self.set_model(),
                            '4': self.set_model(),
                            '5': self.set_model(),
@@ -117,7 +118,10 @@ class RegressionModel:
                 l = str(label+1)
                 self.models[l].fit(self.data[l].data_fr, self.data[l].handPos)
 
-    def predict(self,fireRate, label):
+
+    def predict(self, spikes: np.ndarray, label: int, initial_position: np.ndarray):
+        fireRate = spikes
+
         if self.approach == 'LinearRegression':
             l = str(label)
             # fireRate = fireRate.reshape([98, 1])

@@ -10,7 +10,6 @@
 
 import os
 import typing as t
-from collections import deque
 from collections import defaultdict
 
 import numpy as np
@@ -47,6 +46,14 @@ class Trial:
         """A single numpy item represents the y information of the hand, where -1 represents the `self._valid_end`-th
         element."""
         return self._hand_pos[1, self._valid_end - 1]
+
+    @property
+    def initial_hand_pos_x(self) -> float:
+        return self._hand_pos[0, 0].item()
+
+    @property
+    def initial_hand_pos_y(self) -> float:
+        return self._hand_pos[1, 0].item()
 
     @property
     def hand_pos_all_x(self) -> np.ndarray:
@@ -98,6 +105,20 @@ class Trial:
             return self._spikes[:, self._valid_start:]
         else:
             return self._spikes[:, self._valid_start: self._valid_end]
+
+    @property
+    def split_firing_rate(self) -> np.ndarray:
+        """Split the firing rate, i.e., split the whole time window into 3 parts, and merge them."""
+        if self._valid_end == 0 and self._valid_start == 0:
+            raise NotImplementedError(f"The start and end indices have not been assigned for"
+                                      f" {self.__class__.__name__}!")
+
+        time_window = self.valid_end - self.valid_start
+        split_idx = int(time_window / 3)
+
+        return np.concatenate((np.sum(self._spikes[:, self.valid_start:split_idx], axis=1),
+                               np.sum(self._spikes[:, split_idx: 2 * split_idx], axis=1),
+                               np.sum(self._spikes[:, 2 * split_idx: self.valid_end], axis=1)), axis=0)
 
 
 class RetrieveData:
@@ -225,6 +246,7 @@ class RetrieveData:
     def hand_positions(self) -> t.Dict:
         """All hand position information."""
         return self._hand_positions
+
 
 
 if __name__ == "__main__":
