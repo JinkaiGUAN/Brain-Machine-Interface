@@ -10,6 +10,7 @@
 import numpy as np
 import scipy.io as scio
 from sklearn.linear_model import LinearRegression
+from base_model import BaseModelRegression
 
 
 data_path = 'F:/Users/27339/Desktop/IC/Modules/BMI/Brain-Machine-Interface/report_src/monkeydata_training.mat'
@@ -80,7 +81,7 @@ class RegressionData:
         return Spikes.T, fr_Data.T, handPos.T
 
 
-class RegressionModel:
+class RegressionModel(BaseModelRegression):
 
     def __init__(self, dataPath: str,  winWidth=300, bin=20, approach = 'LinearRegression'):
         self.data = {'1': RegressionData(dataPath, 1, winWidth=winWidth, bin=bin),
@@ -117,7 +118,10 @@ class RegressionModel:
                 l = str(label+1)
                 self.models[l].fit(self.data[l].data_fr, self.data[l].handPos)
 
-    def predict(self, fireRate, label):
+
+    def predict(self, spikes: np.ndarray, label: int, initial_position: np.ndarray):
+        fireRate = spikes
+
         if self.approach == 'LinearRegression':
             l = str(label)
             # fireRate = fireRate.reshape([98, 1])

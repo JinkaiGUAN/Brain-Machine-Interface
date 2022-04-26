@@ -15,11 +15,12 @@ import scipy.io as scio
 from matplotlib import rcParams
 from sklearn.metrics import mean_squared_error
 
-from Regression import RegressionModel
 from classification import Classifier
+from configuration import Configuration
 from preprocess import RetrieveData
 from preprocess import Trial
 from sampling_window_split import SPlitRegression
+from Regression import RegressionModel
 
 # Configure the global configuration for plotting
 plot_config = {
@@ -30,12 +31,14 @@ plot_config = {
 }
 rcParams.update(plot_config)
 
+config = Configuration()
+
 
 class Estimation:
     def __init__(self, data_path: str):
         # bin windows
-        self.window_width = 300
-        self.bin_width = 20
+        self.window_width = config.time_window_width
+        self.bin_width = config.bin_width
 
         self.data = scio.loadmat(data_path).get('trial')
 
@@ -44,9 +47,15 @@ class Estimation:
             "algorithm": "ball_tree",
         }
         self.classifier = Classifier(model_name='KNN', params=params)
-        self.regressionAgent = RegressionModel(data_path)
-        self.split_regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
-                                               window_width=self.window_width)
+
+        if config.model_name == config.split_regression:
+            self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
+                                         window_width=self.window_width, isRidge=False)
+        elif config.model_name == config.ridge_regression:
+            self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
+                                         window_width=self.window_width, isRidge=True)
+        elif config.model_name == config.simple_linear_regression:
+            self.regressor = RegressionModel(data_path)
 
         # classification data
         self.classification_training_data = RetrieveData(self.data[:51, :], bin_width=self.bin_width,
@@ -65,9 +74,7 @@ class Estimation:
     def train_model(self) -> None:
         # train the classification model
         self.classifier.fit(self.classification_training_data.X, self.classification_training_data.y)
-        self.regressionAgent.fit()
-
-        self.split_regressor.fit()
+        self.regressor.fit()
 
     def classifier_predict(self, x: np.ndarray) -> int:
         time_length = x.shape[1]
@@ -94,11 +101,8 @@ class Estimation:
         Returns:
 
         """
-        # fire_rate = self.regressionAgent.getFR(spikes.T)
-        # pre_pos = self.regressionAgent.predict(fire_rate, label + 1)
-        # pos_x, pos_y = np.ravel(pre_pos)
-
-        pos_x, pos_y = self.split_regressor.predict(spikes, label, initial_position)
+        # Using splitting window for data
+        pos_x, pos_y = self.regressor.predict(spikes, label, initial_position)
 
         return pos_x, pos_y
 
@@ -188,9 +192,10 @@ class Estimation:
         plt.title("Monkey hand position distribution")
         plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
         plt.tight_layout()
-        os.makedirs("../figures", exist_ok=True)
-        plt.savefig("../figures/prediction.svg", format='svg', dpi=1600, bbox_inches='tight')
+        os.makedirs("figures", exist_ok=True)
+        plt.savefig("figures/prediction.svg", format='svg', dpi=1600, bbox_inches='tight')
         plt.show()
+        # plt.savefig("../figures/prediction.svg", format='svg', dpi=1600, bbox_inches='tight')
         print("classification accuracy: ", np.round(correct_count / sampling_data_num, 3))
 
     def run(self):

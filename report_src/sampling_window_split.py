@@ -12,9 +12,10 @@ from collections import defaultdict
 
 import numpy as np
 import scipy.io as scio
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Ridge
 
 from preprocess import Trial
+from base_model import BaseModelRegression
 
 
 class SingleAngleData:
@@ -69,15 +70,27 @@ class RegressionData:
         return all_data
 
 
-class SPlitRegression:
-    def __init__(self, data_path: t.Union[np.ndarray, str], bin_width: int = 20, window_width: int = 300):
+class SPlitRegression(BaseModelRegression):
+    def __init__(self, data_path: t.Union[np.ndarray, str], bin_width: int = 20, window_width: int = 300,
+                 isRidge: bool = False):
+        """
+
+        Args:
+            data_path ():
+            bin_width ():
+            window_width ():
+            isRidge (): Set it to False to use linear regression, otherwise it would be Ridge regression.
+        """
         data_generator = RegressionData(data_path)
 
         self.data: t.Dict[int, SingleAngleData] = data_generator.generate_data()
         self.bin_width = bin_width
         self.window_width = window_width
 
-        self.models = {i: LinearRegression() for i in range(data_generator.angle_num)}
+        if isRidge:
+            self.models = {i: Ridge(alpha=0.9) for i in range(data_generator.angle_num)}
+        else:
+            self.models = {i: LinearRegression() for i in range(data_generator.angle_num)}
 
     def fit(self):
         for label, data in self.data.items():
