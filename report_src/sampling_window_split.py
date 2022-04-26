@@ -98,9 +98,6 @@ class SPlitRegression:
 
         return hand_pos[0, 0].item(), hand_pos[0, 1].item()
 
-    def run(self):
-        pass
-
 
 if __name__ == "__main__":
     import os

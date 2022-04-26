@@ -9,19 +9,17 @@
 """
 import typing as t
 
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io as scio
-
-import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from sklearn.metrics import mean_squared_error
 
+from Regression import RegressionModel
+from classification import Classifier
 from preprocess import RetrieveData
 from preprocess import Trial
-from classification import Classifier
-from Regression import RegressionModel
 from sampling_window_split import SPlitRegression
-
 
 # Configure the global configuration for plotting
 plot_config = {
@@ -85,7 +83,17 @@ class Estimation:
 
         return label
 
-    def regression_predict(self, spikes: np.ndarray, label: int) -> t.Tuple[float, float]:
+    def regression_predict(self, spikes: np.ndarray, label: int, initial_position: np.ndarray) -> t.Tuple[float, float]:
+        """ The prediction part using regression.
+
+        Args:
+            spikes ():
+            label ():
+            initial_position (np.ndarray): initial position of hands, with size of 2 by 1.
+
+        Returns:
+
+        """
         # fire_rate = self.regressionAgent.getFR(spikes.T)
         # pre_pos = self.regressionAgent.predict(fire_rate, label + 1)
         # pos_x, pos_y = np.ravel(pre_pos)
@@ -139,7 +147,9 @@ class Estimation:
 
                     # predict labe
                     label = self.classifier_predict(spikes)
-                    hand_pos_x_pred, hand_pos_y_pred = self.regression_predict(spikes, label)
+                    initial_position = np.asarray(
+                        [[raw_single_trail.initial_hand_pos_x], [raw_single_trail.initial_hand_pos_y]])
+                    hand_pos_x_pred, hand_pos_y_pred = self.regression_predict(spikes, label, initial_position)
 
                     # hand position
                     hand_positions_x.append(float(hand_pos_x_pred))

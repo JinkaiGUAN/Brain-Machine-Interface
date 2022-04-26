@@ -48,6 +48,14 @@ class Trial:
         return self._hand_pos[1, self._valid_end - 1]
 
     @property
+    def initial_hand_pos_x(self) -> float:
+        return self._hand_pos[0, 0].item()
+
+    @property
+    def initial_hand_pos_y(self) -> float:
+        return self._hand_pos[1, 0].item()
+
+    @property
     def hand_pos_all_x(self) -> np.ndarray:
         return self._hand_pos[0, :]
 
