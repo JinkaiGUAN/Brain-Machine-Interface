@@ -15,12 +15,13 @@ import scipy.io as scio
 from matplotlib import rcParams
 from sklearn.metrics import mean_squared_error
 
-from classification import Classifier
+from classification import KNN_Classifier, CNN_Classifier
 from configuration import Configuration
 from preprocess import RetrieveData
 from preprocess import Trial
 from sampling_window_split import SPlitRegression
 from Regression import RegressionModel
+
 
 # Configure the global configuration for plotting
 plot_config = {
@@ -42,12 +43,17 @@ class Estimation:
 
         self.data = scio.loadmat(data_path).get('trial')
 
-        params = {
-            "n_neighbors": 30,
-            "algorithm": "ball_tree",
-        }
-        self.classifier = Classifier(model_name='KNN', params=params)
+        # chose classifier according to the configuration file
+        if config.classifier_name == config.knn_classification:
+            params = {
+                "n_neighbors": 30,
+                "algorithm": "ball_tree",
+            }
+            self.classifier = KNN_Classifier(model_name='KNN', params=params)
+        elif config.classifier_name == config.cnn_classification:
+            self.classifier = CNN_Classifier(self.data, bin_width=self.bin_width, window_width=self.window_width)
 
+        # choose regressor accoridng to the configuration file
         if config.model_name == config.split_regression:
             self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
                                          window_width=self.window_width, isRidge=False)
@@ -61,7 +67,6 @@ class Estimation:
         self.classification_training_data = RetrieveData(self.data[:51, :], bin_width=self.bin_width,
                                                          window_width=self.window_width, valid_start=0, valid_end=340,
                                                          isClassification=True)
-
         # retrieve data information
         self.trail_num = self.data.shape[0]
         self.angle_num = self.data.shape[1]
@@ -77,16 +82,9 @@ class Estimation:
         self.regressor.fit()
 
     def classifier_predict(self, x: np.ndarray) -> int:
-        time_length = x.shape[1]
+        # x : 98 * t
 
-        threshold = 340
-        # time_step = threshold if time_length > threshold else -1
-        if time_length <= threshold:
-            x = np.mean(x, axis=1)
-        else:
-            x = np.mean(x[:, :threshold], axis=1)
-
-        label = self.classifier.predict(np.asarray([x.tolist()]))
+        label = self.classifier.predict(x)
 
         return label
 

@@ -13,6 +13,7 @@ import typing as t
 
 import numpy as np
 import scipy.io as scio
+import torch
 from sklearn import metrics
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.decomposition import PCA
@@ -21,6 +22,8 @@ from matplotlib import rcParams
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.autograd import Variable
+from tqdm import tqdm
 
 from preprocess import RetrieveData
 from preprocess import Trial
@@ -52,7 +55,7 @@ class AvgMeter:
         self._vals.clear()
 
 
-class Classifier:
+class KNN_Classifier:
     def __init__(self, model_name: str = None, params: t.Dict = None) -> None:
         """In this project, accuracy can be more important than MSE, thus, in the comparison of accuracy of two
         naive classifiers, we concluded that KNN is more robust for firring rate data."""
@@ -70,7 +73,16 @@ class Classifier:
         self.model.fit(X, y)
 
     def predict(self, X: np.ndarray) -> int:
-        return int(self.model.predict(X).item())
+        time_length = X.shape[1]
+
+        threshold = 340
+        # time_step = threshold if time_length > threshold else -1
+        if time_length <= threshold:
+            X = np.mean(X, axis=1)
+        else:
+            X = np.mean(X[:, :threshold], axis=1)
+
+        return int(self.model.predict(np.asarray([X.tolist()])).item())
 
 
 class Trainer:
@@ -80,7 +92,7 @@ class Trainer:
         self.training_data = RetrieveData(self.data[:51, :], valid_start=0, valid_end=340, isClassification=True)
         self.test_data = RetrieveData(self.data[51:, :], valid_start=0, valid_end=340, isClassification=True)
 
-        self.model = Classifier()
+        self.model = KNN_Classifier()
         self.pca = PCA(n_components=95)
 
     def k_fold_cv(self, k: int = 10) -> None:
@@ -174,8 +186,6 @@ class Model(nn.Module):
         x = self.layer4(x)
         return x
 
-from sampling_window_split import RegressionData, SingleAngleData
-
 
 class CNN_Classifier:
     def __init__(self, data_path: t.Union[np.ndarray, str], bin_width: int = 20, window_width: int = 300):
@@ -184,16 +194,50 @@ class CNN_Classifier:
         if isinstance(data_path, np.ndarray):
             self.data = data_path
 
-        data_generator = RegressionData(data_path)
+        self.bin_width = bin_width
+        self.window_width = window_width
 
-        self.data: t.Dict[int, SingleAngleData] = data_generator.generate_data()
+        self.classification_training_data = RetrieveData(self.data, bin_width=self.bin_width,
+                                                         window_width=self.window_width, valid_start=0, valid_end=340,
+                                                         isClassification=True)
 
         self.epoch_num = 200
+        self.model = Model(self.classification_training_data.X.shape[1])
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.0005)
+        self.loss_fn = nn.CrossEntropyLoss()
 
+    def fit(self, x=None, y=None) -> None:
+        X_train = Variable(torch.from_numpy(self.classification_training_data.X)).float()
+        y_train = Variable(torch.from_numpy(self.classification_training_data.y)).long()
 
-    def train(self):
-        pass
+        # loss_list = np.zeros((self.epoch_num,))
+        # accuracy_list = np.zeros((self.epoch_num,))
 
+        for epoch in range(self.epoch_num):
+            y_pred = self.model(X_train)
+            loss = self.loss_fn(y_pred, y_train)
+            # loss_list[epoch] = loss.item()
+
+            # Zero gradients
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+    def predict(self, X: np.ndarray) -> int:
+        time_length = X.shape[1]
+
+        threshold = 340
+        # time_step = threshold if time_length > threshold else -1
+        if time_length <= threshold:
+            X = np.mean(X, axis=1)
+        else:
+            X = np.mean(X[:, :threshold], axis=1)
+
+        with torch.no_grad():
+            x = Variable(torch.from_numpy(np.asarray([X.tolist()]))).float()
+            y_pred = self.model(x)
+
+        return int(torch.argmax(y_pred, dim=1).item())
 
 
 if __name__ == "__main__":
@@ -208,3 +252,6 @@ if __name__ == "__main__":
     # # trainer.initial_position_checker()
     #
     # trainer.velocity_checker()
+
+    solution = CNN_Classifier(mat_path)
+    solution.fit()

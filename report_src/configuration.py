@@ -20,6 +20,12 @@ class Configuration:
         self.ridge_regression = "ridge_regression"
         self.simple_linear_regression = "linear_regression"
 
+        self.cnn_classification = "cnn_classification"
+        self.knn_classification = "knn_classification"
+
         # model chosen
         self.model_name = self.ridge_regression
+        self.classifier_name = self.knn_classification
+
+
 
