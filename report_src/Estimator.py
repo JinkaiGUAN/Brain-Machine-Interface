@@ -15,14 +15,13 @@ import scipy.io as scio
 from matplotlib import rcParams
 from sklearn.metrics import mean_squared_error
 
+from Regression import RegressionModel
+from back_regression_classification import PostClassificationData, BackRegressionTraining
 from classification import KNN_Classifier, CNN_Classifier
 from configuration import Configuration
 from preprocess import RetrieveData
 from preprocess import Trial
 from sampling_window_split import SPlitRegression
-from Regression import RegressionModel
-from back_regression_classification import PostClassificationData
-
 
 # Configure the global configuration for plotting
 plot_config = {
@@ -44,6 +43,14 @@ class Estimation:
 
         self.data = scio.loadmat(data_path).get('trial')
 
+        # classification data
+        self.classification_training_data = RetrieveData(self.data[:51, :], bin_width=self.bin_width,
+                                                         window_width=self.window_width, valid_start=0, valid_end=340,
+                                                         isClassification=True)
+        # This is used to classify whether the hand is still or moving
+        self.post_classification_data = PostClassificationData(self.data[:51, :], bin_width=config.bin_width,
+                                                               window_width=config.time_window_width)
+
         # chose classifier according to the configuration file
         if config.classifier_name == config.knn_classification:
             params = {
@@ -54,22 +61,17 @@ class Estimation:
         elif config.classifier_name == config.cnn_classification:
             self.classifier = CNN_Classifier(self.data, bin_width=self.bin_width, window_width=self.window_width)
 
+        self.post_regression_classifier = BackRegressionTraining(self.post_classification_data)
+
         # choose regressor accoridng to the configuration file
         if config.model_name == config.split_regression:
             self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
-                                         window_width=self.window_width, isRidge=False)
+                                             window_width=self.window_width, isRidge=False)
         elif config.model_name == config.ridge_regression:
             self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
-                                         window_width=self.window_width, isRidge=True)
+                                             window_width=self.window_width, isRidge=True)
         elif config.model_name == config.simple_linear_regression:
             self.regressor = RegressionModel(data_path)
-
-        # classification data
-        self.classification_training_data = RetrieveData(self.data[:51, :], bin_width=self.bin_width,
-                                                         window_width=self.window_width, valid_start=0, valid_end=340,
-                                                         isClassification=True)
-        # This is used to classify whether the hand is still or moving
-        self.post_classification_data = PostClassificationData(self.data[:51, :])
 
         # retrieve data information
         self.trail_num = self.data.shape[0]
@@ -83,6 +85,7 @@ class Estimation:
     def train_model(self) -> None:
         # train the classification model
         self.classifier.fit(self.classification_training_data.X, self.classification_training_data.y)
+        self.post_regression_classifier.fit()
         self.regressor.fit()
 
     def classifier_predict(self, x: np.ndarray) -> int:
@@ -92,7 +95,8 @@ class Estimation:
 
         return label
 
-    def regression_predict(self, spikes: np.ndarray, label: int, initial_position: np.ndarray) -> t.Tuple[float, float]:
+    def regression_predict(self, spikes: np.ndarray, label: int, initial_position: np.ndarray) -> t.Tuple[float,
+                                                                                                          float, int]:
         """ The prediction part using regression.
 
         Args:
@@ -103,10 +107,12 @@ class Estimation:
         Returns:
 
         """
+        stage_label = self.post_regression_classifier.predict(spikes)
+
         # Using splitting window for data
         pos_x, pos_y = self.regressor.predict(spikes, label, initial_position)
 
-        return pos_x, pos_y
+        return pos_x, pos_y, stage_label
 
     def rsme_xy(self, pre_flatx: t.List, pre_flaty: t.List, flat_x: t.List, flat_y: t.List) -> float:
         squared_numbersx = [number ** 2 for number in pre_flatx]
@@ -128,6 +134,7 @@ class Estimation:
 
         # helper parameters for accuracy calculation use
         correct_count = 0
+        stage_correct_count = 0
         sampling_data_num = 0
         angles_set = set()
         flag = False
@@ -141,6 +148,7 @@ class Estimation:
         for trail_idx in range(51, self.trail_num, 1):
             for angle_idx in range(self.angle_num):
                 raw_single_trail = Trial(self.data[trail_idx, angle_idx], 0, -1)
+                time_length = raw_single_trail.spikes.shape[1]
 
                 # predict hand position
                 hand_positions_x = []
@@ -151,11 +159,18 @@ class Estimation:
                     # The all spikes for this specified time window
                     spikes = raw_single_trail.raw_firing_rate
 
+                    # generate the stage lable
+                    if raw_single_trail.valid_end >= (time_length - config.split_idx):
+                        true_stage_label = 1
+                    else:
+                        true_stage_label = 0
+
                     # predict label
                     label = self.classifier_predict(spikes)
                     initial_position = np.asarray(
                         [[raw_single_trail.initial_hand_pos_x], [raw_single_trail.initial_hand_pos_y]])
-                    hand_pos_x_pred, hand_pos_y_pred = self.regression_predict(spikes, label, initial_position)
+                    hand_pos_x_pred, hand_pos_y_pred, pred_stage_label = self.regression_predict(spikes, label,
+                                                                                                 initial_position)
 
                     # hand position
                     hand_positions_x.append(float(hand_pos_x_pred))
@@ -165,6 +180,9 @@ class Estimation:
                     if label == angle_idx:
                         correct_count += 1
                     sampling_data_num += 1
+
+                    if true_stage_label == pred_stage_label:
+                        stage_correct_count += 1
 
                     # Collect the raw hand position data
                     raw_flat_x.append(raw_single_trail.hand_pos_x)
@@ -197,8 +215,10 @@ class Estimation:
         os.makedirs("figures", exist_ok=True)
         plt.savefig("figures/prediction.svg", format='svg', dpi=1600, bbox_inches='tight')
         plt.show()
-        # plt.savefig("../figures/prediction.svg", format='svg', dpi=1600, bbox_inches='tight')
         print("classification accuracy: ", np.round(correct_count / sampling_data_num, 3))
+        print("classification accuracy: ", np.round(stage_correct_count / sampling_data_num, 3))
+
+
 
     def run(self):
         """Main function to run the whole process"""

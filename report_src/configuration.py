@@ -15,6 +15,9 @@ class Configuration:
         self.bin_width = 20
         self.time_window_width = 300
 
+        # the index where we want to separate the window
+        self.split_idx = 100
+
         # model configurations
         self.split_regression = "split_regression"
         self.ridge_regression = "ridge_regression"

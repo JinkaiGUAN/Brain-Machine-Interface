@@ -7,25 +7,28 @@
 @Date    : 27/04/2022 15:38 
 @Brief   : Classify the post regression data.
 """
+from __future__ import annotations
 import typing as t
 from collections import defaultdict
 from sklearn.neighbors import KNeighborsClassifier
-from __future__ import annotations
 
 import numpy as np
 import scipy.io as scio
 
 from preprocess import Trial
+from configuration import Configuration
+
+config = Configuration()
 
 
 class PostClassificationData:
     """This dataset is used to classify the still state and moving state at the end of training."""
 
     class PostClassificationEntry:
-        def __init__(self, firing_rate: t.List[np.ndarray], still_label: t.List, hand_position_x: t.List[float],
+        def __init__(self, firing_rate: t.List[np.ndarray], still_labels: t.List, hand_position_x: t.List[float],
                      hand_position_y: t.List[float]) -> None:
             self.firing_rate = firing_rate
-            self.still_label = still_label
+            self.still_labels = still_labels
             self.hand_position_x = hand_position_x
             self.hand_position_y = hand_position_y
 
@@ -98,9 +101,10 @@ class PostClassificationData:
         return all_data
 
     def generate_data(self) -> t.Tuple[t.Dict, t.Dict]:
+        split_idx = config.split_idx
 
-        non_still_data = self.__generate_data__(100, still_label=0)
-        still_data = self.__generate_data__(100, still_label=1)
+        non_still_data = self.__generate_data__(split_idx, still_label=0)
+        still_data = self.__generate_data__(split_idx, still_label=1)
 
         return non_still_data, still_data
 
@@ -112,6 +116,35 @@ class BackRegressionTraining:
         self.model = KNeighborsClassifier()
 
     def fit(self):
+        X, y = self.__merge_data__()
+
+        self.model.fit(X, y)
+
+    def predict(self, spikes: np.ndarray) -> int:
+        time_length = spikes.shape[1]
+
+        firing_rate = np.sum(spikes[:, time_length - self.data.window_width:], axis=1)
+
+        return int(self.model.predict([firing_rate.tolist()])[0].item())
+
+    def __merge_data__(self) -> t.Tuple[np.ndarray, np.ndarray]:
+        """Merge the data into non-still and still part for training."""
+        non_still_firing_rate = []
+        still_firing_rate = []
+        non_still_labels = []
+        still_labels = []
+
+        non_still_data, still_data = self.data.generate_data()
+        for (_, non_still), (_, still) in zip(non_still_data.items(), still_data.items()):
+            non_still_firing_rate += non_still.firing_rate
+            non_still_labels += non_still.still_labels
+            still_firing_rate += still.firing_rate
+            still_labels += still.still_labels
+
+        X = np.concatenate((non_still_firing_rate, still_firing_rate), axis=0)
+        y = np.concatenate((non_still_labels, still_labels), axis=0)
+
+        return X, y
 
 
 
