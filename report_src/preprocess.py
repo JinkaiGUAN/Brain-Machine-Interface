@@ -87,11 +87,18 @@ class Trial:
             raise NotImplementedError(f"The start and end indices have not been assigned for"
                                       f" {self.__class__.__name__}!")
 
-        # todo: using mean is more reasonable.
         if self._valid_end == -1:
             return np.mean(self._spikes[:, self._valid_start:], axis=1)
         else:
             return np.mean(self._spikes[:, self._valid_start: self._valid_end], axis=1)
+
+    @property
+    def firing_rate_by_sum(self) -> np.ndarray:
+        """Using sum to calculate the firing rate."""
+        if self._valid_end == -1:
+            return np.sum(self._spikes[:, self._valid_start:], axis=1)
+        else:
+            return np.sum(self._spikes[:, self._valid_start: self._valid_end], axis=1)
 
     @property
     def raw_firing_rate(self) -> np.ndarray:
@@ -119,6 +126,18 @@ class Trial:
         return np.concatenate((np.sum(self._spikes[:, self.valid_start:split_idx], axis=1),
                                np.sum(self._spikes[:, split_idx: 2 * split_idx], axis=1),
                                np.sum(self._spikes[:, 2 * split_idx: self.valid_end], axis=1)), axis=0)
+
+    # @property
+    # def post_two_blocks(self) -> t.Tuple[np.ndarray, np.ndarray]:
+    #     """Split the post neuro signal (i.e., last time window) into two blocks. The first block gives the increasing
+    #         distance relationship, and the second part gives us almost still movement since the monkey is trying to stop
+    #         the hand.
+    #
+    #     Notes:
+    #
+    #     """
+
+
 
 
 class RetrieveData:
@@ -262,7 +281,7 @@ if __name__ == "__main__":
     src_dir = os.path.join(os.path.abspath(__file__), '..')
     mat_path = os.path.join(src_dir, 'monkeydata_training.mat')
 
-    retrieve_data = RetrieveData(mat_path)
+    retrieve_data = RetrieveData(mat_path, isClassification=False)
     retrieve_data.assign_dataset_v2()
     # print(retrieve_data.X.shape)
     # print(retrieve_data.y.shape)
