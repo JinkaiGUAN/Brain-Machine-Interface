@@ -126,7 +126,7 @@ class BackRegressionTraining:
         firing_rate = np.sum(spikes[:, time_length - self.data.window_width:], axis=1)
 
         return int(self.model.predict([firing_rate.tolist()])[0].item())
-
+    #
     def __merge_data__(self) -> t.Tuple[np.ndarray, np.ndarray]:
         """Merge the data into non-still and still part for training."""
         non_still_firing_rate = []
