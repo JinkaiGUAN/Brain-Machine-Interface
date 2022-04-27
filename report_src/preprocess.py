@@ -123,7 +123,7 @@ class Trial:
         time_window = self.valid_end - self.valid_start
         split_idx = int(time_window / 3)
 
-        return np.concatenate((np.sum(self._spikes[:, self.valid_start:split_idx], axis=1),
+        return np.concatenate((np.sum(self._spikes[:, self.valid_start : split_idx], axis=1),
                                np.sum(self._spikes[:, split_idx: 2 * split_idx], axis=1),
                                np.sum(self._spikes[:, 2 * split_idx: self.valid_end], axis=1)), axis=0)
 
@@ -196,7 +196,6 @@ class RetrieveData:
     def assign_dataset(self):
         """Retrieve data from raw input data, which should be used for KNN classification."""
 
-        # todo: check whether this can be valid using for KNN or not.
         pre_idx = 0
         for trail_idx in range(self.trail_num):
             for angle_idx in range(self.angle_num):
@@ -215,7 +214,6 @@ class RetrieveData:
             for angle_idx in range(self.angle_num):
                 # Retrieve the data by the bins
                 single_trail = Trial(self.data[trail_idx, angle_idx])
-                # todo: check the time window here
                 for _start in range(0, len(single_trail) - self.window_width + 1, self.bin_width):
                     # The start is from 0
                     single_trail.valid_start, single_trail.valid_end = 0, _start + self.window_width

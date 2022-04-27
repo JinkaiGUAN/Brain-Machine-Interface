@@ -58,8 +58,7 @@ class RegressionData:
                 raw_single_trail = Trial(self.data[trail_idx, angle_idx], 0, -1)
 
                 for _start in range(0, len(raw_single_trail) - self.window_width + 1, self.bin_width):
-                    # todo: check the start and end problem
-                    raw_single_trail.valid_start, raw_single_trail.valid_end = 0, _start + self.window_width
+                    raw_single_trail.valid_start, raw_single_trail.valid_end = _start, _start + self.window_width
 
                     # Generate firing rate
                     firing_rate.append(raw_single_trail.split_firing_rate)

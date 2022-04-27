@@ -60,7 +60,6 @@ class KNN_Classifier:
         """In this project, accuracy can be more important than MSE, thus, in the comparison of accuracy of two
         naive classifiers, we concluded that KNN is more robust for firring rate data."""
 
-        # todo: add more techniques in model name;
         params = {
             "n_neighbors": 30,
             "algorithm": "ball_tree"

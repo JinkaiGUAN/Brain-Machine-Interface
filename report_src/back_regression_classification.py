@@ -9,6 +9,7 @@
 """
 import typing as t
 from collections import defaultdict
+from sklearn.neighbors import KNeighborsClassifier
 from __future__ import annotations
 
 import numpy as np
@@ -62,7 +63,7 @@ class PostClassificationData:
         for angle_idx in range(self.angle_num):
 
             firing_rate = []
-            still_label = []  # if the window edge touches the dead region, it should be 1. Otherwise, it is 0.
+            still_labels = []  # if the window edge touches the dead region, it should be 1. Otherwise, it is 0.
             hand_position_x = []
             hand_position_y = []
             for trail_idx in range(self.trail_num):
@@ -70,7 +71,6 @@ class PostClassificationData:
                 time_length = raw_single_trail.spikes.shape[1]
 
                 for _start in range(0, len(raw_single_trail) - self.window_width + 1, self.bin_width):
-                    # todo: check the start and end problem
                     raw_single_trail.valid_start, raw_single_trail.valid_end = _start, _start + self.window_width
 
                     # still_label == 0
@@ -82,7 +82,7 @@ class PostClassificationData:
                     if still_label == 1 and raw_single_trail.valid_end < (time_length - split_idx):
                         continue
 
-                    still_label.append(still_label)
+                    still_labels.append(still_label)
 
                     # Generate firing rate
                     firing_rate.append(raw_single_trail.firing_rate_by_sum)
@@ -91,7 +91,7 @@ class PostClassificationData:
                     hand_position_y.append(raw_single_trail.hand_pos_y - raw_single_trail.initial_hand_pos_y)
 
             all_data[angle_idx] = PostClassificationData.PostClassificationEntry(firing_rate,
-                                                                                 still_label,
+                                                                                 still_labels,
                                                                                  hand_position_x,
                                                                                  hand_position_y)
 
@@ -103,5 +103,16 @@ class PostClassificationData:
         still_data = self.__generate_data__(100, still_label=1)
 
         return non_still_data, still_data
+
+
+class BackRegressionTraining:
+    def __init__(self, data: PostClassificationData):
+
+        self.data = data
+        self.model = KNeighborsClassifier()
+
+    def fit(self):
+
+
 
 

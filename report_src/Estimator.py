@@ -21,6 +21,7 @@ from preprocess import RetrieveData
 from preprocess import Trial
 from sampling_window_split import SPlitRegression
 from Regression import RegressionModel
+from back_regression_classification import PostClassificationData
 
 
 # Configure the global configuration for plotting
@@ -67,6 +68,9 @@ class Estimation:
         self.classification_training_data = RetrieveData(self.data[:51, :], bin_width=self.bin_width,
                                                          window_width=self.window_width, valid_start=0, valid_end=340,
                                                          isClassification=True)
+        # This is used to classify whether the hand is still or moving
+        self.post_classification_data = PostClassificationData(self.data[:51, :])
+
         # retrieve data information
         self.trail_num = self.data.shape[0]
         self.angle_num = self.data.shape[1]
