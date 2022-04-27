@@ -25,7 +25,7 @@ class Configuration:
 
         # model chosen
         self.model_name = self.ridge_regression
-        self.classifier_name = self.knn_classification
+        self.classifier_name = self.cnn_classification
 
 
 

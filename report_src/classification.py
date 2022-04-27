@@ -209,7 +209,7 @@ class CNN_Classifier:
         self.loss_fn = nn.CrossEntropyLoss()
 
     def fit(self, x=None, y=None) -> None:
-        X_train = Variable(torch.from_numpy(self.classification_training_data.X)).float()
+        X_train = Variable(torch.from_numpy(self.classification_training_data.X.astype(np.float64))).float()
         y_train = Variable(torch.from_numpy(self.classification_training_data.y)).long()
 
         # loss_list = np.zeros((self.epoch_num,))
@@ -226,14 +226,21 @@ class CNN_Classifier:
             self.optimizer.step()
 
     def predict(self, X: np.ndarray) -> int:
-        time_length = X.shape[1]
+        # time_length = X.shape[1]
+        #
+        # threshold = 340
+        # # time_step = threshold if time_length > threshold else -1
+        # if time_length <= threshold:
+        #     X = np.mean(X, axis=1)
+        # else:
+        #     X = np.mean(X[:, :threshold], axis=1)
 
-        threshold = 340
-        # time_step = threshold if time_length > threshold else -1
-        if time_length <= threshold:
-            X = np.mean(X, axis=1)
-        else:
-            X = np.mean(X[:, :threshold], axis=1)
+        time_length = X.shape[1]
+        time_length = time_length if time_length <= 320 else 320
+
+        sum_spike = np.sum(X[:, 0:time_length], axis=1)
+
+        X = sum_spike
 
         with torch.no_grad():
             x = Variable(torch.from_numpy(np.asarray([X.tolist()]))).float()

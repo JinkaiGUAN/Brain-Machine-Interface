@@ -202,7 +202,13 @@ class RetrieveData:
                     single_trail.valid_start, single_trail.valid_end = 0, _start + self.window_width
                     # Assign firing rate and reaching angles
 
+                    spikes = single_trail.raw_firing_rate
+                    time_length = spikes.shape[1]
+                    time_length = time_length if time_length <= 320 else 320
 
+                    sum_spike = np.sum(spikes[:, 0:time_length], axis=1)
+                    self._X.append(sum_spike)
+                    self._y.append(angle_idx)
 
                     # self._X.append(single_trail.firing_rate.tolist())
                     # self._X.append(single_trail.raw_firing_rate)
