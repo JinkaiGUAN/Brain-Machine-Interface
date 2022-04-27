@@ -164,7 +164,8 @@ class Trainer:
         pass
 
     def velocity_checker(self):
-        self.training_data.hand_position_x
+        # self.training_data.hand_position_x
+        pass
 
     def test(self):
         """Test function for all."""
@@ -198,8 +199,9 @@ class CNN_Classifier:
         self.window_width = window_width
 
         self.classification_training_data = RetrieveData(self.data, bin_width=self.bin_width,
-                                                         window_width=self.window_width, valid_start=0, valid_end=340,
-                                                         isClassification=True)
+                                                         window_width=self.window_width,
+                                                         valid_start=0, valid_end=340,
+                                                         isClassification=False)
 
         self.epoch_num = 200
         self.model = Model(self.classification_training_data.X.shape[1])

@@ -134,7 +134,7 @@ class Estimation:
         pre_flat_x = []
         pre_flat_y = []
 
-        for trail_idx in range(self.trail_num):
+        for trail_idx in range(51, self.trail_num, 1):
             for angle_idx in range(self.angle_num):
                 raw_single_trail = Trial(self.data[trail_idx, angle_idx], 0, -1)
 

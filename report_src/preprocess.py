@@ -201,13 +201,16 @@ class RetrieveData:
                     # The start is from 0
                     single_trail.valid_start, single_trail.valid_end = 0, _start + self.window_width
                     # Assign firing rate and reaching angles
+
+
+
                     # self._X.append(single_trail.firing_rate.tolist())
-                    self._X.append(single_trail.raw_firing_rate)
-                    self._y.append(angle_idx)
+                    # self._X.append(single_trail.raw_firing_rate)
+                    # self._y.append(angle_idx)
 
                     # retrieve hand positions, using float value
-                    self._hand_position_x.append(single_trail.hand_pos_x.item())
-                    self._hand_position_y.append(single_trail.hand_pos_y.item())
+                    # self._hand_position_x.append(single_trail.hand_pos_x.item())
+                    # self._hand_position_y.append(single_trail.hand_pos_y.item())
 
     @property
     def X(self) -> np.ndarray:
