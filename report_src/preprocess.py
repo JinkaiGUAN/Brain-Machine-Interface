@@ -120,6 +120,15 @@ class Trial:
                                np.sum(self._spikes[:, split_idx: 2 * split_idx], axis=1),
                                np.sum(self._spikes[:, 2 * split_idx: self.valid_end], axis=1)), axis=0)
 
+    def get_firing_rate(self) -> np.ndarray:
+        """get the firing rate"""
+        if self._valid_end == 0 and self._valid_start == 0:
+            raise NotImplementedError(f"The start and end indices have not been assigned for"
+                                      f" {self.__class__.__name__}!")
+
+        #time_window = self.valid_end - self.valid_start
+        return np.sum(self._spikes[:, self.valid_end-300:self.valid_end], axis=1)
+
 
 class RetrieveData:
     def __init__(self, data_path: t.Union[np.ndarray, str], bin_width: int = 20, window_width: int = 300,

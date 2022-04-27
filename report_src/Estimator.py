@@ -20,7 +20,8 @@ from configuration import Configuration
 from preprocess import RetrieveData
 from preprocess import Trial
 from sampling_window_split import SPlitRegression
-from Regression import RegressionModel
+from linear_regression import Linear_Regression
+from KalmanRegression import RegressionModel
 
 # Configure the global configuration for plotting
 plot_config = {
@@ -55,7 +56,8 @@ class Estimation:
             self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
                                          window_width=self.window_width, isRidge=True)
         elif config.model_name == config.simple_linear_regression:
-            self.regressor = RegressionModel(data_path)
+            # self.regressor = RegressionModel(data_path)
+            self.regressor = Linear_Regression(self.data[:51, :])
 
         # classification data
         self.classification_training_data = RetrieveData(self.data[:51, :], bin_width=self.bin_width,
@@ -111,7 +113,6 @@ class Estimation:
         squared_numbersy = [number ** 2 for number in pre_flaty]
         sum_list1 = [a + b for a, b in zip(squared_numbersx, squared_numbersy)]
         s11 = np.sqrt(sum_list1)
-
         fsquared_numbersx = [number ** 2 for number in flat_x]
         fsquared_numbersy = [number ** 2 for number in flat_y]
         sum_list2 = [a + b for a, b in zip(fsquared_numbersx, fsquared_numbersy)]
@@ -135,8 +136,7 @@ class Estimation:
         raw_flat_y = []
         pre_flat_x = []
         pre_flat_y = []
-
-        for trail_idx in range(self.trail_num):
+        for trail_idx in range(51, self.trail_num,1):
             for angle_idx in range(self.angle_num):
                 raw_single_trail = Trial(self.data[trail_idx, angle_idx], 0, -1)
 
@@ -153,11 +153,16 @@ class Estimation:
                     label = self.classifier_predict(spikes)
                     initial_position = np.asarray(
                         [[raw_single_trail.initial_hand_pos_x], [raw_single_trail.initial_hand_pos_y]])
-                    hand_pos_x_pred, hand_pos_y_pred = self.regression_predict(spikes, label, initial_position)
-
+                    hand_pos_x_pred, hand_pos_y_pred = self.regression_predict(spikes, angle_idx, initial_position)
                     # hand position
+                    #if abs(hand_pos_x_pred) < 200 and abs(hand_pos_y_pred<200):
                     hand_positions_x.append(float(hand_pos_x_pred))
                     hand_positions_y.append(float(hand_pos_y_pred))
+                    #else:
+                        #print(_start)
+                        #print(trail_idx)
+                        #print(angle_idx)
+                        #print(hand_pos_y_pred,hand_pos_x_pred)
 
                     # calculate classification accuracy
                     if label == angle_idx:

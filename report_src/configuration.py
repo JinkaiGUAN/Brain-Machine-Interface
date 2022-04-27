@@ -21,5 +21,5 @@ class Configuration:
         self.simple_linear_regression = "linear_regression"
 
         # model chosen
-        self.model_name = self.ridge_regression
+        self.model_name = self.split_regression
 

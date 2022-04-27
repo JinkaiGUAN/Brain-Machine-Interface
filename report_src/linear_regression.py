@@ -1,12 +1,8 @@
-# -*- coding: UTF-8 -*-
-"""
-@Project : 3-coursework 
-@File    : sampling_window_split.py
-@IDE     : PyCharm 
-@Author  : Peter
-@Date    : 25/04/2022 16:31 
-@Brief   : 
-"""
+# -*-coding = utf-8 -*-
+# @Time : 27/04/2022 15:12
+# @Author : ZHONGJIE ZHANG
+# @File :linear_regression.py
+# @Software:PyCharm
 import typing as t
 from collections import defaultdict
 
@@ -49,7 +45,7 @@ class RegressionData:
 
         for angle_idx in range(self.angle_num):
 
-            firing_rate = []
+            firing_rate = np.zeros([98,1])
             hand_position_x = []
             hand_position_y = []
 
@@ -60,16 +56,15 @@ class RegressionData:
                     raw_single_trail.valid_start, raw_single_trail.valid_end = 0, _start + self.window_width
 
                     # Generate firing rate
-                    firing_rate.append(raw_single_trail.split_firing_rate)
+
+                    firing_rate= np.append(firing_rate,raw_single_trail.get_firing_rate().reshape([98,1]),axis=1)
                     hand_position_x.append(raw_single_trail.hand_pos_x - raw_single_trail.initial_hand_pos_x)
                     hand_position_y.append(raw_single_trail.hand_pos_y - raw_single_trail.initial_hand_pos_y)
-
-            all_data[angle_idx] = SingleAngleData(firing_rate, hand_position_x, hand_position_y)
-
+            all_data[angle_idx] = SingleAngleData(firing_rate[:,1:].T, hand_position_x, hand_position_y)
         return all_data
 
 
-class SPlitRegression(BaseModelRegression):
+class Linear_Regression(BaseModelRegression):
     def __init__(self, data_path: t.Union[np.ndarray, str], bin_width: int = 20, window_width: int = 300,
                  isRidge: bool = False):
         """
@@ -98,15 +93,10 @@ class SPlitRegression(BaseModelRegression):
             self.models[label].fit(data.firing_rate, position)
 
     def predict(self, spikes: np.ndarray, label: int, initial_positions: np.ndarray) -> t.Tuple[float, float]:
-        split_idx = int(self.window_width / 3)
+        #split_idx = int(self.window_width / 3)
         valid_start = spikes.shape[1] - self.window_width
-
-        firing_rate = np.concatenate((
-            np.sum(spikes[:, valid_start: split_idx], axis=1),
-            np.sum(spikes[:, split_idx: 2 * split_idx], axis=1),
-            np.sum(spikes[:, 2 * split_idx:], axis=1)))
-
-        hand_pos = self.models[label].predict([firing_rate])
+        firing_rate = np.sum(spikes[:, valid_start: ], axis=1)
+        hand_pos = self.models[label].predict(firing_rate.reshape([1,98]))
         initial_x, initial_y = initial_positions[0, 0].item(), initial_positions[1, 0].item()
 
         return hand_pos[0, 0].item() + initial_x, hand_pos[0, 1].item() + initial_y
