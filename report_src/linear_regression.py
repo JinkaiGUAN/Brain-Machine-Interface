@@ -67,9 +67,9 @@ class RegressionData:
                                                                      axis=1)
             single_angle_fr[angle_inx] = single_angle_fr[angle_inx][:,1:]
             single_angle_position_xy[angle_inx] = single_angle_position_xy[angle_inx][:,1:]
-            lda = LDA(n_components=2)
-            lda.fit(single_angle_position_xy[angle_inx], y)
-            single_angle_position_xy[angle_inx] = lda.transform(X)
+            #lda = LDA(n_components=2)
+            #lda.fit(single_angle_position_xy[angle_inx], y)
+            #single_angle_position_xy[angle_inx] = lda.transform(X)
             if normalize:
                 #mean_fr = np.mean(single_angle_fr[angle_inx],axis = 1).reshape(98,1)
                 #norm_fr = np.std(single_angle_fr[angle_inx],axis = 1).reshape(98,1)

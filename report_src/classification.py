@@ -13,15 +13,21 @@ import typing as t
 
 import numpy as np
 import scipy.io as scio
+import torch
 from sklearn import metrics
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.naive_bayes import GaussianNB
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.autograd import Variable
+from tqdm import tqdm
 
 from preprocess import RetrieveData
 from preprocess import Trial
+
 
 # Configure the global configuration for plotting
 plot_config = {
@@ -49,12 +55,11 @@ class AvgMeter:
         self._vals.clear()
 
 
-class Classifier:
+class KNN_Classifier:
     def __init__(self, model_name: str = None, params: t.Dict = None) -> None:
         """In this project, accuracy can be more important than MSE, thus, in the comparison of accuracy of two
         naive classifiers, we concluded that KNN is more robust for firring rate data."""
 
-        # todo: add more techniques in model name;
         params = {
             "n_neighbors": 30,
             "algorithm": "ball_tree"
@@ -67,7 +72,16 @@ class Classifier:
         self.model.fit(X, y)
 
     def predict(self, X: np.ndarray) -> int:
-        return int(self.model.predict(X).item())
+        time_length = X.shape[1]
+
+        threshold = 340
+        # time_step = threshold if time_length > threshold else -1
+        if time_length <= threshold:
+            X = np.mean(X, axis=1)
+        else:
+            X = np.mean(X[:, :threshold], axis=1)
+
+        return int(self.model.predict(np.asarray([X.tolist()])).item())
 
 
 class Trainer:
@@ -77,7 +91,7 @@ class Trainer:
         self.training_data = RetrieveData(self.data[:51, :], valid_start=0, valid_end=340, isClassification=True)
         self.test_data = RetrieveData(self.data[51:, :], valid_start=0, valid_end=340, isClassification=True)
 
-        self.model = Classifier()
+        self.model = KNN_Classifier()
         self.pca = PCA(n_components=95)
 
     def k_fold_cv(self, k: int = 10) -> None:
@@ -149,116 +163,89 @@ class Trainer:
         pass
 
     def velocity_checker(self):
-        self.training_data.hand_position_x
+        # self.training_data.hand_position_x
+        pass
 
     def test(self):
         """Test function for all."""
         pass
 
 
-class Estimation:
-    def __init__(self, data_path: str):
-        # bin windows
-        self.window_width = 300
-        self.bin_width = 30
+class Model(nn.Module):
+    def __init__(self, input_dim):
+        super(Model, self).__init__()
+        self.layer1 = nn.Linear(input_dim, 100)
+        self.layer2 = nn.Linear(100, 70)
+        self.layer3 = nn.Linear(70, 35)
+        self.layer4 = nn.Linear(35, 8)
 
-        self.data = scio.loadmat(data_path).get('trial')
+    def forward(self, x):
+        x = F.relu(self.layer1(x))
+        x = F.relu(self.layer2(x))
+        x = F.relu(self.layer3(x))
+        x = self.layer4(x)
+        return x
 
-        params = {
-            "n_neighbors": 30,
-            "algorithm": "ball_tree",
-        }
-        self.classifier = Classifier(model_name='KNN', params=params)
 
-        # classification data
-        self.classification_training_data = RetrieveData(self.data[:51, :], valid_start=0, valid_end=340,
-                                                         isClassification=True)
+class CNN_Classifier:
+    def __init__(self, data_path: t.Union[np.ndarray, str], bin_width: int = 20, window_width: int = 300):
+        if isinstance(data_path, str):
+            self.data = scio.loadmat(data_path).get('trial')
+        if isinstance(data_path, np.ndarray):
+            self.data = data_path
 
-        # retrieve data information
-        self.trail_num = self.data.shape[0]
-        self.angle_num = self.data.shape[1]
-        self.neuro_num = self.data[0, 0][1].shape[0]
+        self.bin_width = bin_width
+        self.window_width = window_width
 
-        # color configurations
-        self.colors = [plt.cm.tab20(i) for i in range(self.angle_num)]
-        self.angle_mapping = [30, 70, 110, 150, 190, 230, 310, 350]
+        self.classification_training_data = RetrieveData(self.data, bin_width=self.bin_width,
+                                                         window_width=self.window_width,
+                                                         valid_start=0, valid_end=340,
+                                                         isClassification=False)
 
-    def train_model(self) -> None:
-        # train the classification model
-        self.classifier.fit(self.classification_training_data.X, self.classification_training_data.y)
+        self.epoch_num = 200
+        self.model = Model(self.classification_training_data.X.shape[1])
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.0005)
+        self.loss_fn = nn.CrossEntropyLoss()
 
-    def classifier_predict(self, x: np.ndarray) -> int:
-        time_length = x.shape[1]
+    def fit(self, x=None, y=None) -> None:
+        X_train = Variable(torch.from_numpy(self.classification_training_data.X.astype(np.float64))).float()
+        y_train = Variable(torch.from_numpy(self.classification_training_data.y)).long()
 
-        threshold = 340
-        # time_step = threshold if time_length > threshold else -1
-        if time_length <= threshold:
-            x = np.mean(x, axis=1)
-        else:
-            x = np.mean(x[:, :threshold], axis=1)
+        # loss_list = np.zeros((self.epoch_num,))
+        # accuracy_list = np.zeros((self.epoch_num,))
 
-        label = self.classifier.predict(np.asarray([x.tolist()]))
+        for epoch in range(self.epoch_num):
+            y_pred = self.model(X_train)
+            loss = self.loss_fn(y_pred, y_train)
+            # loss_list[epoch] = loss.item()
 
-        return label
+            # Zero gradients
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
 
-    def test(self):
+    def predict(self, X: np.ndarray) -> int:
+        # time_length = X.shape[1]
+        #
+        # threshold = 340
+        # # time_step = threshold if time_length > threshold else -1
+        # if time_length <= threshold:
+        #     X = np.mean(X, axis=1)
+        # else:
+        #     X = np.mean(X[:, :threshold], axis=1)
 
-        fig = plt.figure(figsize=(13, 10))
+        time_length = X.shape[1]
+        time_length = time_length if time_length <= 320 else 320
 
-        # helper parameters for accuracy calculation use
-        correct_count = 0
-        sampling_data_num = 0
-        angles_set = set()
+        sum_spike = np.sum(X[:, 0:time_length], axis=1)
 
-        for trail_idx in range(self.trail_num):
-            for angle_idx in range(self.angle_num):
-                raw_single_trail = Trial(self.data[trail_idx, angle_idx], 0, -1)
+        X = sum_spike
 
-                # predict hand position
-                hand_positions_x = []
-                hand_positions_y = []
-                for _start in range(0, len(raw_single_trail) - self.window_width + 1, self.bin_width):
-                    raw_single_trail.valid_start, raw_single_trail.valid_end = 0, _start + self.window_width
+        with torch.no_grad():
+            x = Variable(torch.from_numpy(np.asarray([X.tolist()]))).float()
+            y_pred = self.model(x)
 
-                    # The all spikes for this specified time window
-                    spikes = raw_single_trail.raw_firing_rate
-
-                    # predict label
-                    label = self.classifier_predict(spikes)
-                    # hand position
-                    hand_pos_x_pred = 1
-                    hand_pos_y_pred = 2
-                    hand_positions_x.append(hand_pos_x_pred)
-                    hand_positions_y.append(hand_pos_y_pred)
-
-                    # calculate classification accuracy
-                    if label == angle_idx:
-                        correct_count += 1
-                    sampling_data_num += 1
-
-                # plot the graph
-                if angle_idx not in angles_set:
-                    angles_set.add(angle_idx)
-                    plt.plot(raw_single_trail.hand_pos_all_x, raw_single_trail.hand_pos_all_y, c=self.colors[angle_idx],
-                             label=f"{self.angle_mapping[angle_idx]}$^\circ$")
-                plt.plot(raw_single_trail.hand_pos_all_x, raw_single_trail.hand_pos_all_y, c=self.colors[angle_idx])
-                plt.plot(hand_positions_x, hand_positions_y, c=self.colors[angle_idx])
-
-        plt.xlabel("Distance along x-axis")
-        plt.ylabel("Distance along y-axis")
-        plt.title("Monkey hand position distribution")
-        plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-        plt.tight_layout()
-        plt.show()
-        print("classification accuracy: ", np.round(correct_count / sampling_data_num, 3))
-
-    def run(self):
-        """Main function to run the whole process"""
-        # Train the model
-        # self.train_model()
-
-        # test the model
-        self.test()
+        return int(torch.argmax(y_pred, dim=1).item())
 
 
 if __name__ == "__main__":
@@ -273,5 +260,6 @@ if __name__ == "__main__":
     # # trainer.initial_position_checker()
     #
     # trainer.velocity_checker()
-    estimation = Estimation(mat_path)
-    estimation.run()
+
+    solution = CNN_Classifier(mat_path)
+    solution.fit()

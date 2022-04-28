@@ -87,11 +87,18 @@ class Trial:
             raise NotImplementedError(f"The start and end indices have not been assigned for"
                                       f" {self.__class__.__name__}!")
 
-        # todo: using mean is more reasonable.
         if self._valid_end == -1:
             return np.mean(self._spikes[:, self._valid_start:], axis=1)
         else:
             return np.mean(self._spikes[:, self._valid_start: self._valid_end], axis=1)
+
+    @property
+    def firing_rate_by_sum(self) -> np.ndarray:
+        """Using sum to calculate the firing rate."""
+        if self._valid_end == -1:
+            return np.sum(self._spikes[:, self._valid_start:], axis=1)
+        else:
+            return np.sum(self._spikes[:, self._valid_start: self._valid_end], axis=1)
 
     @property
     def raw_firing_rate(self) -> np.ndarray:
@@ -116,9 +123,10 @@ class Trial:
         time_window = self.valid_end - self.valid_start
         split_idx = int(time_window / 3)
 
-        return np.concatenate((np.sum(self._spikes[:, self.valid_start:split_idx], axis=1),
+        return np.concatenate((np.sum(self._spikes[:, self.valid_start : split_idx], axis=1),
                                np.sum(self._spikes[:, split_idx: 2 * split_idx], axis=1),
                                np.sum(self._spikes[:, 2 * split_idx: self.valid_end], axis=1)), axis=0)
+
 
     def get_firing_rate(self) -> np.ndarray:
         """get the firing rate"""
@@ -128,6 +136,18 @@ class Trial:
 
         #time_window = self.valid_end - self.valid_start
         return np.sum(self._spikes[:, self.valid_end-300:self.valid_end], axis=1)
+
+    # @property
+    # def post_two_blocks(self) -> t.Tuple[np.ndarray, np.ndarray]:
+    #     """Split the post neuro signal (i.e., last time window) into two blocks. The first block gives the increasing
+    #         distance relationship, and the second part gives us almost still movement since the monkey is trying to stop
+    #         the hand.
+    #
+    #     Notes:
+    #
+    #     """
+
+
 
 
 class RetrieveData:
@@ -186,7 +206,6 @@ class RetrieveData:
     def assign_dataset(self):
         """Retrieve data from raw input data, which should be used for KNN classification."""
 
-        # todo: check whether this can be valid using for KNN or not.
         pre_idx = 0
         for trail_idx in range(self.trail_num):
             for angle_idx in range(self.angle_num):
@@ -205,18 +224,26 @@ class RetrieveData:
             for angle_idx in range(self.angle_num):
                 # Retrieve the data by the bins
                 single_trail = Trial(self.data[trail_idx, angle_idx])
-                # todo: check the time window here
                 for _start in range(0, len(single_trail) - self.window_width + 1, self.bin_width):
                     # The start is from 0
                     single_trail.valid_start, single_trail.valid_end = 0, _start + self.window_width
                     # Assign firing rate and reaching angles
-                    # self._X.append(single_trail.firing_rate.tolist())
-                    self._X.append(single_trail.raw_firing_rate)
+
+                    spikes = single_trail.raw_firing_rate
+                    time_length = spikes.shape[1]
+                    time_length = time_length if time_length <= 320 else 320
+
+                    sum_spike = np.sum(spikes[:, 0:time_length], axis=1)
+                    self._X.append(sum_spike)
                     self._y.append(angle_idx)
 
+                    # self._X.append(single_trail.firing_rate.tolist())
+                    # self._X.append(single_trail.raw_firing_rate)
+                    # self._y.append(angle_idx)
+
                     # retrieve hand positions, using float value
-                    self._hand_position_x.append(single_trail.hand_pos_x.item())
-                    self._hand_position_y.append(single_trail.hand_pos_y.item())
+                    # self._hand_position_x.append(single_trail.hand_pos_x.item())
+                    # self._hand_position_y.append(single_trail.hand_pos_y.item())
 
     @property
     def X(self) -> np.ndarray:
@@ -262,7 +289,7 @@ if __name__ == "__main__":
     src_dir = os.path.join(os.path.abspath(__file__), '..')
     mat_path = os.path.join(src_dir, 'monkeydata_training.mat')
 
-    retrieve_data = RetrieveData(mat_path)
+    retrieve_data = RetrieveData(mat_path, isClassification=False)
     retrieve_data.assign_dataset_v2()
     # print(retrieve_data.X.shape)
     # print(retrieve_data.y.shape)

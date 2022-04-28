@@ -19,7 +19,7 @@ short_data_path = './monkeydata_training.mat'
 
 class RegressionData:
 
-    def __init__(self,dataPath: str, label: int, winWidth=300, bin=20) -> None:
+    def __init__(self,dataPath, label: int, winWidth=300, bin=20) -> None:
         self.data = scio.loadmat(dataPath).get('trial')
         self.winWidth = winWidth
         self.bin = bin
