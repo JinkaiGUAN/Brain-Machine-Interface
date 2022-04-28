@@ -46,33 +46,6 @@ class Estimation:
 
         self.data = scio.loadmat(data_path).get('trial')
 
-
-        params = {
-            "n_neighbors": 30,
-            "algorithm": "ball_tree",
-        }
-        self.classifier = KNN_Classifier(model_name='KNN', params=params)
-
-        if config.model_name == config.split_regression:
-            self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
-                                         window_width=self.window_width, isRidge=False)
-        elif config.model_name == config.split_ridge_regression:
-            self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
-                                         window_width=self.window_width, isRidge=True)
-        elif config.model_name == config.simple_linear_regression:
-            # self.regressor = RegressionModel(data_path)
-            self.regressor = Linear_Regression(self.data[:51, :],isRidge = False)
-        elif config.model_name == config.simple_ridge_regression:
-            # self.regressor = RegressionModel(data_path)
-            self.regressor = Linear_Regression(self.data[:51, :],isRidge = True)
-        elif config.model_name == config.segmented_linear_regression:
-            # self.regressor = RegressionModel(data_path)
-            self.regressor = Segmented_Linear_Regression(self.data[:51, :],isRidge = False)
-        elif config.model_name == config.segmented_ridge_regression:
-            # self.regressor = RegressionModel(data_path)
-            self.regressor = Segmented_Linear_Regression(self.data[:51, :],isRidge = True)
-
-
         # classification data
         self.classification_training_data = RetrieveData(self.data[:51, :], bin_width=self.bin_width,
                                                          window_width=self.window_width, valid_start=0, valid_end=340,
@@ -89,7 +62,8 @@ class Estimation:
             }
             self.classifier = KNN_Classifier(model_name='KNN', params=params)
         elif config.classifier_name == config.cnn_classification:
-            self.classifier = CNN_Classifier(self.data, bin_width=self.bin_width, window_width=self.window_width)
+            self.classifier = CNN_Classifier(self.data[:51, :], bin_width=self.bin_width,
+                                             window_width=self.window_width)
 
         self.post_regression_classifier = BackRegressionTraining(self.post_classification_data)
 
@@ -260,10 +234,8 @@ class Estimation:
         os.makedirs("figures", exist_ok=True)
         plt.savefig("figures/prediction.svg", format='svg', dpi=1600, bbox_inches='tight')
         plt.show()
-        print("classification accuracy: ", np.round(correct_count / sampling_data_num, 3))
-        print("classification accuracy: ", np.round(stage_correct_count / sampling_data_num, 3))
-
-
+        print("Angle classification accuracy: ", np.round(correct_count / sampling_data_num, 3))
+        print("Stage classification accuracy: ", np.round(stage_correct_count / sampling_data_num, 3))
 
     def run(self):
         """Main function to run the whole process"""
