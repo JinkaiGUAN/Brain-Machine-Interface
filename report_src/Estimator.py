@@ -20,7 +20,7 @@ from configuration import Configuration
 from preprocess import RetrieveData
 from preprocess import Trial
 from sampling_window_split import SPlitRegression
-from linear_regression import Linear_Regression
+from linear_regression import Linear_Regression,Segmented_Linear_Regression
 from KalmanRegression import RegressionModel
 
 # Configure the global configuration for plotting
@@ -52,12 +52,21 @@ class Estimation:
         if config.model_name == config.split_regression:
             self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
                                          window_width=self.window_width, isRidge=False)
-        elif config.model_name == config.ridge_regression:
+        elif config.model_name == config.split_ridge_regression:
             self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
                                          window_width=self.window_width, isRidge=True)
         elif config.model_name == config.simple_linear_regression:
             # self.regressor = RegressionModel(data_path)
-            self.regressor = Linear_Regression(self.data[:51, :])
+            self.regressor = Linear_Regression(self.data[:51, :],isRidge = False)
+        elif config.model_name == config.simple_ridge_regression:
+            # self.regressor = RegressionModel(data_path)
+            self.regressor = Linear_Regression(self.data[:51, :],isRidge = True)
+        elif config.model_name == config.segmented_linear_regression:
+            # self.regressor = RegressionModel(data_path)
+            self.regressor = Segmented_Linear_Regression(self.data[:51, :],isRidge = False)
+        elif config.model_name == config.segmented_ridge_regression:
+            # self.regressor = RegressionModel(data_path)
+            self.regressor = Segmented_Linear_Regression(self.data[:51, :],isRidge = True)
 
         # classification data
         self.classification_training_data = RetrieveData(self.data[:51, :], bin_width=self.bin_width,
@@ -153,14 +162,12 @@ class Estimation:
                     label = self.classifier_predict(spikes)
                     initial_position = np.asarray(
                         [[raw_single_trail.initial_hand_pos_x], [raw_single_trail.initial_hand_pos_y]])
-                    hand_pos_x_pred, hand_pos_y_pred = self.regression_predict(spikes, angle_idx, initial_position)
+                    hand_pos_x_pred, hand_pos_y_pred = self.regression_predict(spikes, label, initial_position)
                     # hand position
                     #if abs(hand_pos_x_pred) < 200 and abs(hand_pos_y_pred<200):
                     hand_positions_x.append(float(hand_pos_x_pred))
                     hand_positions_y.append(float(hand_pos_y_pred))
                     #else:
-                        #print(_start)
-                        #print(trail_idx)
                         #print(angle_idx)
                         #print(hand_pos_y_pred,hand_pos_x_pred)
 
@@ -191,7 +198,6 @@ class Estimation:
 
         rmse_val = self.rsme_xy(pre_flat_y, pre_flat_x, raw_flat_x, raw_flat_y)
         print(f"The RMSE value is {rmse_val}.")
-
         plt.xlabel("Distance along x-axis")
         plt.ylabel("Distance along y-axis")
         plt.title("Monkey hand position distribution")
