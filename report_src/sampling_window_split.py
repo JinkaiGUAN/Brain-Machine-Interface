@@ -33,7 +33,6 @@ class RegressionData:
             self.data = scio.loadmat(data_path).get('trial')
         if isinstance(data_path, np.ndarray):
             self.data = data_path
-
         self.bin_width = bin_width
         self.window_width = window_width
         self.valid_start = valid_start

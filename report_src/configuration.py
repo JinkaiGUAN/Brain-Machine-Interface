@@ -20,15 +20,18 @@ class Configuration:
 
         # model configurations
         self.split_regression = "split_regression"
-        self.ridge_regression = "ridge_regression"
+        self.split_ridge_regression = "split_ridge_regression"
         self.simple_linear_regression = "linear_regression"
-
+        self.simple_ridge_regression = "simple_ridge_regression"
+        self.segmented_linear_regression = "segmented_linear_regression"
+        self.segmented_ridge_regression = "segmented_ridge_regression"
+        # model chosen
         self.cnn_classification = "cnn_classification"
         self.knn_classification = "knn_classification"
 
         # model chosen
-        self.model_name = self.split_regression
         self.classifier_name = self.cnn_classification
+        self.model_name = self.segmented_ridge_regression
 
 
 

@@ -2,7 +2,11 @@
 <module version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$" />
+<<<<<<< HEAD
+    <orderEntry type="jdk" jdkName="Python 3.8 (base)" jdkType="Python SDK" />
+=======
     <orderEntry type="jdk" jdkName="Python 3.8" jdkType="Python SDK" />
+>>>>>>> origin
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PackageRequirementsSettings">
