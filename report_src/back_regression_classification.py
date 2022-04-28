@@ -146,6 +146,3 @@ class BackRegressionTraining:
 
         return X, y
 
-
-
-
