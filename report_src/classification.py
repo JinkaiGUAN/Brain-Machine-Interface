@@ -21,12 +21,9 @@ import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 from torch.autograd import Variable
-from tqdm import tqdm
 
 from preprocess import RetrieveData
-from preprocess import Trial
 
 
 # Configure the global configuration for plotting

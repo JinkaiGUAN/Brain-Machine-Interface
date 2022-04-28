@@ -18,14 +18,16 @@ class Configuration:
         # the index where we want to separate the window
         self.split_idx = 100
 
-        # model configurations
+        # ####################### model configurations #######################
+        #  Regressors
         self.split_regression = "split_regression"
         self.split_ridge_regression = "split_ridge_regression"
         self.simple_linear_regression = "linear_regression"
         self.simple_ridge_regression = "simple_ridge_regression"
         self.segmented_linear_regression = "segmented_linear_regression"
         self.segmented_ridge_regression = "segmented_ridge_regression"
-        # model chosen
+
+        # Classifiers for angle index chosen
         self.cnn_classification = "cnn_classification"
         self.knn_classification = "knn_classification"
 

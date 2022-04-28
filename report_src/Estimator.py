@@ -15,16 +15,13 @@ import scipy.io as scio
 from matplotlib import rcParams
 from sklearn.metrics import mean_squared_error
 
-from Regression import RegressionModel
 from back_regression_classification import PostClassificationData, BackRegressionTraining
 from classification import KNN_Classifier, CNN_Classifier
 from configuration import Configuration
+from linear_regression import Linear_Regression, Segmented_Linear_Regression
 from preprocess import RetrieveData
 from preprocess import Trial
 from sampling_window_split import SPlitRegression
-from linear_regression import Linear_Regression,Segmented_Linear_Regression
-from KalmanRegression import RegressionModel
-from classification import KNN_Classifier
 
 # Configure the global configuration for plotting
 plot_config = {
@@ -67,25 +64,21 @@ class Estimation:
 
         self.post_regression_classifier = BackRegressionTraining(self.post_classification_data)
 
-        # choose regressor accoridng to the configuration file
+        # choose regressor according to the configuration file
         if config.model_name == config.split_regression:
             self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
-                                         window_width=self.window_width, isRidge=False)
+                                             window_width=self.window_width, isRidge=False)
         elif config.model_name == config.split_ridge_regression:
             self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
-                                         window_width=self.window_width, isRidge=True)
+                                             window_width=self.window_width, isRidge=True)
         elif config.model_name == config.simple_linear_regression:
-            # self.regressor = RegressionModel(data_path)
-            self.regressor = Linear_Regression(self.data[:51, :],isRidge = False)
+            self.regressor = Linear_Regression(self.data[:51, :], isRidge=False)
         elif config.model_name == config.simple_ridge_regression:
-            # self.regressor = RegressionModel(data_path)
-            self.regressor = Linear_Regression(self.data[:51, :],isRidge = True)
+            self.regressor = Linear_Regression(self.data[:51, :], isRidge=True)
         elif config.model_name == config.segmented_linear_regression:
-            # self.regressor = RegressionModel(data_path)
-            self.regressor = Segmented_Linear_Regression(self.data[:51, :],isRidge = False)
+            self.regressor = Segmented_Linear_Regression(self.data[:51, :], isRidge=False)
         elif config.model_name == config.segmented_ridge_regression:
-            # self.regressor = RegressionModel(data_path)
-            self.regressor = Segmented_Linear_Regression(self.data[:51, :],isRidge = True)
+            self.regressor = Segmented_Linear_Regression(self.data[:51, :], isRidge=True)
 
         # retrieve data information
         self.trail_num = self.data.shape[0]
@@ -186,15 +179,9 @@ class Estimation:
 
                     hand_pos_x_pred, hand_pos_y_pred, pred_stage_label = self.regression_predict(spikes, label,
                                                                                                  initial_position)
-
-
                     # hand position
-                    #if abs(hand_pos_x_pred) < 200 and abs(hand_pos_y_pred<200):
                     hand_positions_x.append(float(hand_pos_x_pred))
                     hand_positions_y.append(float(hand_pos_y_pred))
-                    #else:
-                        #print(angle_idx)
-                        #print(hand_pos_y_pred,hand_pos_x_pred)
 
                     # calculate classification accuracy
                     if label == angle_idx:
@@ -203,6 +190,8 @@ class Estimation:
 
                     if true_stage_label == pred_stage_label:
                         stage_correct_count += 1
+                    else:
+                        print(f"Angle idx: {angle_idx}, Trial idx: {trail_idx}, Time idx: {_start + self.window_width}")
 
                     # Collect the raw hand position data
                     raw_flat_x.append(raw_single_trail.hand_pos_x)
