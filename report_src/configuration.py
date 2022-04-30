@@ -16,7 +16,7 @@ class Configuration:
         self.time_window_width = 300
 
         # the index where we want to separate the window
-        self.split_idx = 100
+        self.split_idx = 200
 
         # ####################### model configurations #######################
         #  Regressors

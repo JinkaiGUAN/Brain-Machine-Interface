@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io as scio
 from matplotlib import rcParams
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, confusion_matrix
 
 from back_regression_classification import PostClassificationData, BackRegressionTraining
 from classification import KNN_Classifier, CNN_Classifier
@@ -111,7 +111,7 @@ class Estimation:
             label ():
             initial_position (np.ndarray): initial position of hands, with size of 2 by 1.
 
-        Returns:
+        Returns:á
 
         """
         stage_label = self.post_regression_classifier.predict(spikes)
@@ -134,6 +134,18 @@ class Estimation:
         rmsall = np.sqrt(mean_squared_error(s11, s22)).item()
         return rmsall
 
+    def cal_fpr(self, y_pre, y_true):
+        cnf_matrix = confusion_matrix(y_true, y_pre)
+
+        FP = cnf_matrix.sum(axis=0) - np.diag(cnf_matrix)
+        FN = cnf_matrix.sum(axis=1) - np.diag(cnf_matrix)
+        TP = np.diag(cnf_matrix)
+        TN = cnf_matrix.sum() - (FP + FN + TP)
+
+        fpr = np.round(FP / (FP + TN + 1e-6), 3)
+
+        return fpr
+
     def test(self):
 
         fig = plt.figure(figsize=(13, 10))
@@ -150,6 +162,11 @@ class Estimation:
         raw_flat_y = []
         pre_flat_x = []
         pre_flat_y = []
+        # collect classification label to calculate the FPR
+        angle_classification_true_labels = []
+        angle_classification_pre_labels = []
+        rest_motion_classification_true_labels = []
+        rest_motion_classification_pre_labels = []
 
         for trail_idx in range(51, self.trail_num, 1):
 
@@ -166,7 +183,7 @@ class Estimation:
                     # The all spikes for this specified time window
                     spikes = raw_single_trail.raw_firing_rate
 
-                    # generate the stage lable
+                    # generate the stage label
                     if raw_single_trail.valid_end >= (time_length - config.split_idx):
                         true_stage_label = 1
                     else:
@@ -190,12 +207,16 @@ class Estimation:
 
                     if true_stage_label == pred_stage_label:
                         stage_correct_count += 1
-                    else:
-                        print(f"Angle idx: {angle_idx}, Trial idx: {trail_idx}, Time idx: {_start + self.window_width}")
 
                     # Collect the raw hand position data
                     raw_flat_x.append(raw_single_trail.hand_pos_x)
                     raw_flat_y.append(raw_single_trail.hand_pos_y)
+
+                    # collect classification labels
+                    angle_classification_pre_labels.append(label)
+                    angle_classification_true_labels.append(angle_idx)
+                    rest_motion_classification_true_labels.append(true_stage_label)
+                    rest_motion_classification_pre_labels.append(pred_stage_label)
 
                 pre_flat_x += hand_positions_x
                 pre_flat_y += hand_positions_y
@@ -225,6 +246,10 @@ class Estimation:
         plt.show()
         print("Angle classification accuracy: ", np.round(correct_count / sampling_data_num, 3))
         print("Stage classification accuracy: ", np.round(stage_correct_count / sampling_data_num, 3))
+
+        fpr_angle_class = self.cal_fpr(y_pre=angle_classification_pre_labels, y_true=angle_classification_true_labels)
+        fpr_stage_class = self.cal_fpr(y_pre=rest_motion_classification_pre_labels, y_true=rest_motion_classification_true_labels)
+        print(f"FPR for angle classification: {fpr_angle_class}, FPR for stage classification: {fpr_stage_class}")
 
     def run(self):
         """Main function to run the whole process"""
