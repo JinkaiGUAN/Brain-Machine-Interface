@@ -22,7 +22,7 @@ from configuration import Configuration
 from preprocess import RetrieveData
 from preprocess import Trial
 from sampling_window_split import SPlitRegression
-from linear_regression import Linear_Regression,Segmented_Linear_Regression
+from linear_regression import Linear_Regression, Segmented_Linear_Regression, All_Linear_Regression, Polar_Linear_Regression
 from KalmanRegression import RegressionModel
 from classification import KNN_Classifier
 
@@ -46,6 +46,9 @@ class Estimation:
 
         self.data = scio.loadmat(data_path).get('trial')
 
+        # Generate the training and testing dataset spliting line
+        self.data_num = self.data.shape[0]
+        self.train_num = int(self.data_num * config.split_ratio)
 
         params = {
             "n_neighbors": 30,
@@ -53,32 +56,13 @@ class Estimation:
         }
         self.classifier = KNN_Classifier(model_name='KNN', params=params)
 
-        if config.model_name == config.split_regression:
-            self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
-                                         window_width=self.window_width, isRidge=False)
-        elif config.model_name == config.split_ridge_regression:
-            self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
-                                         window_width=self.window_width, isRidge=True)
-        elif config.model_name == config.simple_linear_regression:
-            # self.regressor = RegressionModel(data_path)
-            self.regressor = Linear_Regression(self.data[:51, :],isRidge = False)
-        elif config.model_name == config.simple_ridge_regression:
-            # self.regressor = RegressionModel(data_path)
-            self.regressor = Linear_Regression(self.data[:51, :],isRidge = True)
-        elif config.model_name == config.segmented_linear_regression:
-            # self.regressor = RegressionModel(data_path)
-            self.regressor = Segmented_Linear_Regression(self.data[:51, :],isRidge = False)
-        elif config.model_name == config.segmented_ridge_regression:
-            # self.regressor = RegressionModel(data_path)
-            self.regressor = Segmented_Linear_Regression(self.data[:51, :],isRidge = True)
-
-
         # classification data
-        self.classification_training_data = RetrieveData(self.data[:51, :], bin_width=self.bin_width,
+        self.classification_training_data = RetrieveData(self.data[:self.train_num, :], bin_width=self.bin_width,
                                                          window_width=self.window_width, valid_start=0, valid_end=340,
                                                          isClassification=True)
         # This is used to classify whether the hand is still or moving
-        self.post_classification_data = PostClassificationData(self.data[:51, :], bin_width=config.bin_width,
+        self.post_classification_data = PostClassificationData(self.data[:self.train_num, :],
+                                                               bin_width=config.bin_width,
                                                                window_width=config.time_window_width)
 
         # chose classifier according to the configuration file
@@ -89,29 +73,42 @@ class Estimation:
             }
             self.classifier = KNN_Classifier(model_name='KNN', params=params)
         elif config.classifier_name == config.cnn_classification:
-            self.classifier = CNN_Classifier(self.data, bin_width=self.bin_width, window_width=self.window_width)
+            self.classifier = CNN_Classifier(self.data[:self.train_num, :], bin_width=self.bin_width,
+                                             window_width=self.window_width)
 
         self.post_regression_classifier = BackRegressionTraining(self.post_classification_data)
 
         # choose regressor accoridng to the configuration file
         if config.model_name == config.split_regression:
-            self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
-                                         window_width=self.window_width, isRidge=False)
+            self.regressor = SPlitRegression(self.data[:self.train_num, :], bin_width=self.bin_width,
+                                             window_width=self.window_width, isRidge=False)
         elif config.model_name == config.split_ridge_regression:
-            self.regressor = SPlitRegression(self.data[:51, :], bin_width=self.bin_width,
-                                         window_width=self.window_width, isRidge=True)
+            self.regressor = SPlitRegression(self.data[:self.train_num, :], bin_width=self.bin_width,
+                                             window_width=self.window_width, isRidge=True)
         elif config.model_name == config.simple_linear_regression:
             # self.regressor = RegressionModel(data_path)
-            self.regressor = Linear_Regression(self.data[:51, :],isRidge = False)
+            self.regressor = Linear_Regression(self.data[:self.train_num, :], isRidge=False)
         elif config.model_name == config.simple_ridge_regression:
             # self.regressor = RegressionModel(data_path)
-            self.regressor = Linear_Regression(self.data[:51, :],isRidge = True)
+            self.regressor = Linear_Regression(self.data[:self.train_num, :], isRidge=True)
         elif config.model_name == config.segmented_linear_regression:
             # self.regressor = RegressionModel(data_path)
-            self.regressor = Segmented_Linear_Regression(self.data[:51, :],isRidge = False)
+            self.regressor = Segmented_Linear_Regression(self.data[:self.train_num, :], isRidge=False)
         elif config.model_name == config.segmented_ridge_regression:
             # self.regressor = RegressionModel(data_path)
-            self.regressor = Segmented_Linear_Regression(self.data[:51, :],isRidge = True)
+            self.regressor = Segmented_Linear_Regression(self.data[:self.train_num, :], isRidge=True)
+        elif config.model_name == config.all_linear_regression:
+            # self.regressor = RegressionModel(data_path)
+            self.regressor = All_Linear_Regression(self.data[:self.train_num, :], isRidge=False)
+        elif config.model_name == config.all_ridge_regression:
+            # self.regressor = RegressionModel(data_path)
+            self.regressor = All_Linear_Regression(self.data[:self.train_num, :], isRidge=True)
+        elif config.model_name == config.state_linear_regression:
+            # self.regressor = RegressionModel(data_path)
+            self.regressor = Polar_Linear_Regression(self.data[:self.train_num, :], isRidge=False)
+        elif config.model_name == config.state_ridge_regression:
+            # self.regressor = RegressionModel(data_path)
+            self.regressor = Polar_Linear_Regression(self.data[:self.train_num, :], isRidge=True)
 
         # retrieve data information
         self.trail_num = self.data.shape[0]
@@ -150,7 +147,7 @@ class Estimation:
         stage_label = self.post_regression_classifier.predict(spikes)
 
         # Using splitting window for data
-        pos_x, pos_y = self.regressor.predict(spikes, label, initial_position)
+        pos_x, pos_y = self.regressor.predict(spikes, label, initial_position, state_label=stage_label)
 
         return pos_x, pos_y, stage_label
 
@@ -184,7 +181,7 @@ class Estimation:
         pre_flat_x = []
         pre_flat_y = []
 
-        for trail_idx in range(51, self.trail_num, 1):
+        for trail_idx in range(self.train_num, self.trail_num, 1):
 
             for angle_idx in range(self.angle_num):
                 raw_single_trail = Trial(self.data[trail_idx, angle_idx], 0, -1)
@@ -213,14 +210,13 @@ class Estimation:
                     hand_pos_x_pred, hand_pos_y_pred, pred_stage_label = self.regression_predict(spikes, label,
                                                                                                  initial_position)
 
-
                     # hand position
-                    #if abs(hand_pos_x_pred) < 200 and abs(hand_pos_y_pred<200):
+                    # if abs(hand_pos_x_pred) < 200 and abs(hand_pos_y_pred<200):
                     hand_positions_x.append(float(hand_pos_x_pred))
                     hand_positions_y.append(float(hand_pos_y_pred))
-                    #else:
-                        #print(angle_idx)
-                        #print(hand_pos_y_pred,hand_pos_x_pred)
+                    # else:
+                    # print(angle_idx)
+                    # print(hand_pos_y_pred,hand_pos_x_pred)
 
                     # calculate classification accuracy
                     if label == angle_idx:
@@ -229,6 +225,8 @@ class Estimation:
 
                     if true_stage_label == pred_stage_label:
                         stage_correct_count += 1
+                    # else:
+                    # print(f"Angle idx: {angle_idx}, Trial idx: {trail_idx}, Time idx: {_start + self.window_width}")
 
                     # Collect the raw hand position data
                     raw_flat_x.append(raw_single_trail.hand_pos_x)
@@ -262,8 +260,6 @@ class Estimation:
         plt.show()
         print("classification accuracy: ", np.round(correct_count / sampling_data_num, 3))
         print("classification accuracy: ", np.round(stage_correct_count / sampling_data_num, 3))
-
-
 
     def run(self):
         """Main function to run the whole process"""

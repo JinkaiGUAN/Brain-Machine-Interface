@@ -11,7 +11,7 @@ from __future__ import annotations
 import typing as t
 from collections import defaultdict
 from sklearn.neighbors import KNeighborsClassifier
-
+from sklearn.naive_bayes import GaussianNB
 import numpy as np
 import scipy.io as scio
 

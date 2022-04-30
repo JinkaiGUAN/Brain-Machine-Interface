@@ -16,7 +16,7 @@ import numpy as np
 class BaseModelRegression:
 
     @abstractmethod
-    def predict(self, spikes: np.ndarray, label: int, initial_position: np.ndarray) -> t.Tuple[float, float]:
+    def predict(self, spikes: np.ndarray, label: int, initial_position: np.ndarray, state_label = None) -> t.Tuple[float, float]:
         """ The predict function for regression model.
 
         Args:
